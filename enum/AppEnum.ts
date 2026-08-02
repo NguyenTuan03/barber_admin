@@ -18,10 +18,11 @@ export enum AdminTabEnum {
   USERS = 'USERS',
 }
 
-// Sub-navigation inside the Home tab (site-wide settings + hairstyle gallery)
+// Sub-navigation inside the Home tab (site-wide settings + hairstyle gallery + locations)
 export enum HomeSubTabEnum {
   SITE_SETTINGS = 'SITE_SETTINGS',
   GALLERIES = 'GALLERIES',
+  LOCATIONS = 'LOCATIONS',
 }
 
 // Sub-navigation inside the About tab (story/stats, timeline, team)
@@ -49,6 +50,7 @@ export enum SiteSettingKeyEnum {
   HOME_ABOUT_SERVICE_TITLE = 'home_about_service_title',
   HOME_ABOUT_SERVICE_DESCRIPTION = 'home_about_service_description',
   HOME_ABOUT_SERVICE_STATS = 'home_about_service_stats',
+  HOME_ABOUT_SERVICE_IMAGE = 'home_about_service_image',
   HOME_SERVICE_TITLE = 'home_service_title',
   HOME_SERVICE_DESCRIPTION = 'home_service_description',
   HOME_PROMO_TITLE = 'home_promo_title',

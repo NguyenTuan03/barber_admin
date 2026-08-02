@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, Segmented, Input, Button, Tag, Space, Spin, App as AntdApp } from "antd";
+import { Card, Segmented, Input, Button, Spin, App as AntdApp } from "antd";
 import {
   SettingOutlined,
   SaveOutlined,
@@ -17,6 +17,10 @@ import { SiteSettingGroupEnum, SiteSettingKeyEnum } from "@/enum/AppEnum";
 import { SiteSettingItem, SiteSettingsIndexData } from "@/types/siteSetting";
 import { getAdminSiteSettings, saveAdminSiteSetting } from "@/services/adminApi";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { FloatingInfoBlockEditor } from "@/components/admin/FloatingInfoBlockEditor";
+import { AboutServiceStatsEditor } from "@/components/admin/AboutServiceStatsEditor";
+import { ReviewFeatsEditor } from "@/components/admin/ReviewFeatsEditor";
+import { ContactInfoEditor } from "@/components/admin/ContactInfoEditor";
 
 const { TextArea } = Input;
 
@@ -30,7 +34,7 @@ interface SettingGroupMeta {
     key: SiteSettingKeyEnum;
     label: string;
     description: string;
-    type: "text" | "textarea" | "image" | "json";
+    type: "text" | "textarea" | "image" | "json" | "floating_info" | "about_stats" | "review_feats" | "contact_info";
   }[];
 }
 
@@ -71,9 +75,9 @@ const GROUPS_META: SettingGroupMeta[] = [
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_FLOATING_INFO_BLOCK,
-        label: "Dữ liệu Khối Thông Tin Nổi (JSON / Text)",
-        description: "Cấu trúc thông tin Địa chỉ, Giờ mở cửa, Số điện thoại.",
-        type: "json",
+        label: "Khối Thông Tin Nổi",
+        description: "Nhập tiêu đề và nội dung cho từng mục Địa chỉ, Điện thoại, Giờ mở cửa.",
+        type: "floating_info",
       },
     ],
   },
@@ -98,9 +102,15 @@ const GROUPS_META: SettingGroupMeta[] = [
       },
       {
         key: SiteSettingKeyEnum.HOME_ABOUT_SERVICE_STATS,
-        label: "Các con số thống kê (Stats List JSON)",
-        description: "Danh sách chỉ số (VD: 36% Sản phẩm chính hãng, 10+ Năm kinh nghiệm...).",
-        type: "json",
+        label: "Các con số thống kê",
+        description: "Danh sách chỉ số nổi bật (VD: 300.000+ Sản phẩm chính hãng, 10+ Năm kinh nghiệm...).",
+        type: "about_stats",
+      },
+      {
+        key: SiteSettingKeyEnum.HOME_ABOUT_SERVICE_IMAGE,
+        label: "Hình ảnh Giới thiệu",
+        description: "Ảnh minh họa hiển thị bên cạnh phần giới thiệu thương hiệu.",
+        type: "image",
       },
     ],
   },
@@ -133,28 +143,22 @@ const GROUPS_META: SettingGroupMeta[] = [
   },
   {
     group: SiteSettingGroupEnum.REVIEWS,
-    title: "Đánh Giá & Bản Đồ Google Maps",
-    subtitle: "Review Feats, Contact Info, Map iFrame",
-    description: "Cấu hình tiêu chí chất lượng, thông tin đặt lịch và vị trí bản đồ.",
+    title: "Đánh Giá & Liên Hệ",
+    subtitle: "Review Feats, Contact Info",
+    description: "Cấu hình tiêu chí chất lượng và thông tin đặt lịch. Bản đồ chi nhánh đã chuyển sang mục \"Chi nhánh & Bản đồ\".",
     icon: <EnvironmentOutlined />,
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_REVIEW_FEATS,
-        label: "Danh sách Tiêu chí Đánh giá (Review Feats JSON)",
-        description: "Danh sách các điểm nổi bật (Cam kết chính hãng, Thợ lành nghề...).",
-        type: "json",
+        label: "Các Tiêu chí Đánh giá",
+        description: "3 điểm nổi bật hiển thị phía trên khu vực đánh giá (Giấy phép, Thợ chính, Bảo hành).",
+        type: "review_feats",
       },
       {
         key: SiteSettingKeyEnum.HOME_CONTACT_INFO,
-        label: "Thông tin Đặt lịch & Liên hệ (Contact Info)",
-        description: "Số điện thoại, hotline hoặc ghi chú đặt lịch.",
-        type: "textarea",
-      },
-      {
-        key: SiteSettingKeyEnum.HOME_GOOGLE_MAP,
-        label: "Đường dẫn Bản đồ Google Maps (Map URL)",
-        description: "Đường dẫn iFrame hoặc nhúng Google Maps vị trí tiệm.",
-        type: "text",
+        label: "Thông tin Đặt lịch & Liên hệ",
+        description: "Danh sách email, số điện thoại hoặc hotline đặt lịch.",
+        type: "contact_info",
       },
     ],
   },
@@ -267,18 +271,18 @@ export function SiteSettingsManager() {
       {/* Top Banner Header Card */}
       <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <Space className="mb-1">
-              <Tag color="warning" icon={<SettingOutlined />} className="font-extrabold uppercase tracking-widest text-[10px] rounded-full px-3 py-0.5 border-amber-500/30">
-                Dynamic Site Settings
-              </Tag>
-            </Space>
-            <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight m-0">
-              Cấu hình Giao diện Trang chủ (Frontend Design Studio)
-            </h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 m-0">
-              Quản lý dữ liệu động kết nối trực tiếp API Backend (`/api/v1/admin/site_settings`).
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+              <SettingOutlined />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
+                Cấu hình Giao diện Trang chủ
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
+                Quản lý banner, thông tin nổi bật và nội dung hiển thị ở trang chủ.
+              </p>
+            </div>
           </div>
 
           {/* Bilingual Language Switcher with Segmented */}
@@ -356,14 +360,9 @@ export function SiteSettingsManager() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-200 uppercase tracking-wide">
-                            {config.label}
-                          </span>
-                          <Tag color="warning" className="font-mono text-[9px] font-bold m-0 border-amber-500/30">
-                            {config.key}
-                          </Tag>
-                        </div>
+                        <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-200 uppercase tracking-wide">
+                          {config.label}
+                        </span>
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 m-0">
                           {config.description}
                         </p>
@@ -376,12 +375,40 @@ export function SiteSettingsManager() {
                         onClick={() => handleSaveSetting(config.key)}
                         className="bg-amber-500 hover:bg-amber-600 font-extrabold text-xs rounded-lg px-4 border-none shadow-xs"
                       >
-                        Lưu {config.key}
+                        Lưu {config.label}
                       </Button>
                     </div>
 
                     {/* Control input rendering */}
-                    {config.type === "image" ? (
+                    {config.type === "floating_info" ? (
+                      <FloatingInfoBlockEditor
+                        value={currentValue}
+                        onChange={(newJson: string) =>
+                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
+                        }
+                      />
+                    ) : config.type === "about_stats" ? (
+                      <AboutServiceStatsEditor
+                        value={currentValue}
+                        onChange={(newJson: string) =>
+                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
+                        }
+                      />
+                    ) : config.type === "review_feats" ? (
+                      <ReviewFeatsEditor
+                        value={currentValue}
+                        onChange={(newJson: string) =>
+                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
+                        }
+                      />
+                    ) : config.type === "contact_info" ? (
+                      <ContactInfoEditor
+                        value={currentValue}
+                        onChange={(newJson: string) =>
+                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
+                        }
+                      />
+                    ) : config.type === "image" ? (
                       <ImageUploader
                         label="Hình ảnh S3 URL"
                         value={currentValue}

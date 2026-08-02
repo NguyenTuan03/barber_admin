@@ -22,15 +22,21 @@ const AntdThemeContext = createContext<AntdThemeContextType>({
 export const useAntdTheme = () => useContext(AntdThemeContext);
 
 export function AntdThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeEnum>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("barber_admin_theme") as ThemeEnum;
-      if (saved === ThemeEnum.LIGHT || saved === ThemeEnum.DARK) {
-        return saved;
-      }
+  // IMPORTANT: must match on server and first client render (localStorage isn't
+  // available during SSR), so we always start at DARK and sync the saved
+  // preference from localStorage inside a useEffect after mount.
+  const [themeMode, setThemeModeState] = useState<ThemeEnum>(ThemeEnum.DARK);
+
+  // Intentional one-time sync from localStorage (a browser-only external system)
+  // right after mount, to avoid the SSR/client hydration mismatch that reading it
+  // during render would cause.
+  useEffect(() => {
+    const saved = localStorage.getItem("barber_admin_theme") as ThemeEnum;
+    if (saved === ThemeEnum.LIGHT || saved === ThemeEnum.DARK) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setThemeModeState(saved);
     }
-    return ThemeEnum.DARK;
-  });
+  }, []);
 
   const setThemeMode = (mode: ThemeEnum) => {
     setThemeModeState(mode);

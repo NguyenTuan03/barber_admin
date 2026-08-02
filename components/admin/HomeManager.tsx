@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, Tabs, Tag } from "antd";
-import { HomeOutlined, SettingOutlined, PictureOutlined } from "@ant-design/icons";
+import { Card, Tabs } from "antd";
+import { HomeOutlined, SettingOutlined, PictureOutlined, EnvironmentOutlined } from "@ant-design/icons";
 import { HomeSubTabEnum } from "@/enum/AppEnum";
 import { SiteSettingsManager } from "@/components/admin/SiteSettingsManager";
 import { GalleriesManager } from "@/components/admin/GalleriesManager";
+import { LocationsManager } from "@/components/admin/LocationsManager";
 
 export function HomeManager() {
   const [activeSubTab, setActiveSubTab] = useState<HomeSubTabEnum>(HomeSubTabEnum.SITE_SETTINGS);
@@ -29,24 +30,33 @@ export function HomeManager() {
       ),
       children: <GalleriesManager />,
     },
+    {
+      key: HomeSubTabEnum.LOCATIONS,
+      label: (
+        <span className="inline-flex items-center gap-1.5">
+          <EnvironmentOutlined /> Chi nhánh & Bản đồ
+        </span>
+      ),
+      children: <LocationsManager />,
+    },
   ];
 
   return (
     <div className="space-y-6 select-none">
       <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <Tag
-          color="warning"
-          icon={<HomeOutlined />}
-          className="font-extrabold uppercase tracking-widest text-[10px] mb-1 rounded-full px-3 py-0.5 border-amber-500/30"
-        >
-          Home Page Content
-        </Tag>
-        <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight m-0">
-          Quản lý Trang Chủ
-        </h2>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 m-0">
-          Quản lý banner, thông tin nổi bật, khuyến mãi và bộ sưu tập mẫu tóc hiển thị ở trang chủ.
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+            <HomeOutlined />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
+              Quản lý Trang Chủ
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
+              Quản lý banner, thông tin nổi bật, khuyến mãi và bộ sưu tập mẫu tóc hiển thị ở trang chủ.
+            </p>
+          </div>
+        </div>
       </Card>
 
       <Tabs

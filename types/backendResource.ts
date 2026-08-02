@@ -80,6 +80,19 @@ export interface BackendBarber {
   updated_at?: string;
 }
 
+export interface BackendLocation {
+  id?: number | string;
+  location_url: string;
+  position: number;
+  is_active: boolean;
+  name_vi: string;
+  name_en: string;
+  address_vi: string;
+  address_en: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface UploadResponseData {
   url: string;
   upload_type: string;

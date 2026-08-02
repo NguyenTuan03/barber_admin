@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, Tag, Popconfirm, Space, Card, App as AntdApp } from "antd";
+import { Table, Button, Modal, Form, Input, Popconfirm, Space, Card, App as AntdApp } from "antd";
 import { PictureOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { BackendGallery } from "@/types/backendResource";
 import { getAdminGalleries, createAdminGallery, updateAdminGallery, deleteAdminGallery } from "@/services/adminApi";
@@ -50,22 +50,33 @@ export function GalleriesManager() {
   }, []);
 
   const openModal = (gal?: BackendGallery) => {
-    if (gal) {
-      setEditingGallery(gal);
+    setEditingGallery(gal || null);
+    setIsModalOpen(true);
+  };
+
+  // Populate the form only after the Modal (and its Form) have actually
+  // mounted — calling form.setFieldsValue/resetFields from openModal() runs
+  // before the Modal's `open` state change is committed, which logs antd's
+  // "Instance created by useForm is not connected to any Form element"
+  // warning since destroyOnHidden unmounts the Form between opens.
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    if (editingGallery) {
       form.setFieldsValue({
-        title_vi: gal.title_vi || "",
-        title_en: gal.title_en || "",
-        description_vi: gal.description_vi || "",
-        description_en: gal.description_en || "",
+        title_vi: editingGallery.title_vi || "",
+        title_en: editingGallery.title_en || "",
+        description_vi: editingGallery.description_vi || "",
+        description_en: editingGallery.description_en || "",
       });
-      setImageUrl(gal.image_url || "");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImageUrl(editingGallery.image_url || "");
     } else {
-      setEditingGallery(null);
       form.resetFields();
       setImageUrl("");
     }
-    setIsModalOpen(true);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendGallery>) => {
     try {
@@ -110,7 +121,7 @@ export function GalleriesManager() {
       render: (url: string, record: BackendGallery) =>
         url ? (
           <div className="relative w-20 h-14 rounded-xl overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
-            <Image src={url} alt={record.title_vi} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+            <Image src={url} alt={record.title_vi || "Hình ảnh mẫu tóc"} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
           </div>
         ) : (
           <div className="w-20 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
@@ -164,16 +175,18 @@ export function GalleriesManager() {
     <div className="space-y-6 select-none">
       <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <Tag color="warning" icon={<PictureOutlined />} className="font-extrabold uppercase tracking-widest text-[10px] mb-1 rounded-full px-3 py-0.5 border-amber-500/30">
-              Galleries Showcase API
-            </Tag>
-            <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight m-0">
-              Quản lý Bộ Sưu Tập Mẫu Tóc Hot Trend
-            </h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 m-0">
-              Kết nối trực tiếp API Backend `/api/v1/admin/galleries`.
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+              <PictureOutlined />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
+                Quản lý Bộ Sưu Tập Mẫu Tóc Hot Trend
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
+                Quản lý các mẫu tóc nổi bật hiển thị ở trang chủ.
+              </p>
+            </div>
           </div>
 
           <Button
@@ -202,7 +215,7 @@ export function GalleriesManager() {
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
           <div className="grid grid-cols-2 gap-3">
@@ -223,7 +236,7 @@ export function GalleriesManager() {
           </Form.Item>
 
           <div className="mb-4">
-            <ImageUploader label="Hình ảnh Mẫu tóc" value={imageUrl} onChange={setImageUrl} uploadType="galleries" />
+            <ImageUploader label="Hình ảnh Mẫu tóc" value={imageUrl} onChange={setImageUrl} uploadType="gallery" />
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">

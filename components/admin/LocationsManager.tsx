@@ -2,31 +2,26 @@
 
 import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Form, Input, InputNumber, Switch, Tag, Popconfirm, Space, Card, App as AntdApp } from "antd";
-import { TrophyOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CalendarOutlined } from "@ant-design/icons";
-import { BackendMilestone } from "@/types/backendResource";
-import {
-  getAdminMilestones,
-  createAdminMilestone,
-  updateAdminMilestone,
-  deleteAdminMilestone,
-} from "@/services/adminApi";
+import { EnvironmentOutlined, PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
+import { BackendLocation } from "@/types/backendResource";
+import { getAdminLocations, createAdminLocation, updateAdminLocation, deleteAdminLocation } from "@/services/adminApi";
 
 const { TextArea } = Input;
 
-export function MilestonesManager() {
+export function LocationsManager() {
   const { message } = AntdApp.useApp();
-  const [milestones, setMilestones] = useState<BackendMilestone[]>([]);
+  const [locations, setLocations] = useState<BackendLocation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [editingMilestone, setEditingMilestone] = useState<BackendMilestone | null>(null);
+  const [editingLocation, setEditingLocation] = useState<BackendLocation | null>(null);
 
   const [form] = Form.useForm();
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const data = await getAdminMilestones();
-      setMilestones(data);
+      const data = await getAdminLocations();
+      setLocations(data);
     } catch (err: unknown) {
       console.error(err);
     } finally {
@@ -36,10 +31,10 @@ export function MilestonesManager() {
 
   useEffect(() => {
     let isMounted = true;
-    getAdminMilestones()
+    getAdminLocations()
       .then((data) => {
         if (isMounted) {
-          setMilestones(data);
+          setLocations(data);
           setLoading(false);
         }
       })
@@ -51,8 +46,8 @@ export function MilestonesManager() {
     };
   }, []);
 
-  const openModal = (milestone?: BackendMilestone) => {
-    setEditingMilestone(milestone || null);
+  const openModal = (location?: BackendLocation) => {
+    setEditingLocation(location || null);
     setIsModalOpen(true);
   };
 
@@ -64,40 +59,39 @@ export function MilestonesManager() {
   useEffect(() => {
     if (!isModalOpen) return;
 
-    if (editingMilestone) {
+    if (editingLocation) {
       form.setFieldsValue({
-        year: editingMilestone.year || "",
-        position: editingMilestone.position ?? 0,
-        is_active: editingMilestone.is_active ?? true,
-        title_vi: editingMilestone.title_vi || "",
-        title_en: editingMilestone.title_en || "",
-        description_vi: editingMilestone.description_vi || "",
-        description_en: editingMilestone.description_en || "",
+        name_vi: editingLocation.name_vi || "",
+        name_en: editingLocation.name_en || "",
+        address_vi: editingLocation.address_vi || "",
+        address_en: editingLocation.address_en || "",
+        location_url: editingLocation.location_url || "",
+        position: editingLocation.position ?? 0,
+        is_active: editingLocation.is_active ?? true,
       });
     } else {
       form.resetFields();
       form.setFieldsValue({
-        year: new Date().getFullYear().toString(),
-        position: milestones.length,
+        position: locations.length,
         is_active: true,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModalOpen]);
 
-  const handleSubmit = async (values: Partial<BackendMilestone>) => {
+  const handleSubmit = async (values: Partial<BackendLocation>) => {
     try {
-      const payload: Partial<BackendMilestone> = {
+      const payload: Partial<BackendLocation> = {
         ...values,
         position: Number(values.position),
       };
 
-      if (editingMilestone?.id) {
-        await updateAdminMilestone(editingMilestone.id, payload);
-        message.success("Cập nhật cột mốc thành công!");
+      if (editingLocation?.id) {
+        await updateAdminLocation(editingLocation.id, payload);
+        message.success("Cập nhật chi nhánh thành công!");
       } else {
-        await createAdminMilestone(payload);
-        message.success("Thêm cột mốc mới thành công!");
+        await createAdminLocation(payload);
+        message.success("Thêm chi nhánh mới thành công!");
       }
 
       setIsModalOpen(false);
@@ -110,8 +104,8 @@ export function MilestonesManager() {
 
   const handleDelete = async (id: number | string) => {
     try {
-      await deleteAdminMilestone(id);
-      message.success("Đã xóa cột mốc!");
+      await deleteAdminLocation(id);
+      message.success("Đã xóa chi nhánh!");
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa thất bại";
@@ -121,42 +115,38 @@ export function MilestonesManager() {
 
   const columns = [
     {
-      title: "Năm",
-      dataIndex: "year",
-      key: "year",
-      width: 90,
-      render: (year: string) => (
-        <Tag icon={<CalendarOutlined />} color="warning" className="font-mono text-xs font-extrabold border-amber-500/30">
-          {year}
-        </Tag>
-      ),
-    },
-    {
-      title: "Thứ tự",
-      dataIndex: "position",
-      key: "position",
-      width: 80,
-      render: (pos: number) => <span className="font-mono text-xs text-zinc-500">#{pos}</span>,
-    },
-    {
-      title: "Tiêu đề Cột mốc (VI / EN)",
-      key: "title",
-      render: (_: unknown, record: BackendMilestone) => (
+      title: "Chi nhánh (VI / EN)",
+      key: "name",
+      render: (_: unknown, record: BackendLocation) => (
         <div className="flex flex-col">
-          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.title_vi}</span>
-          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.title_en}</span>
+          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.name_vi}</span>
+          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.name_en}</span>
         </div>
       ),
     },
     {
-      title: "Mô tả",
-      key: "description",
-      render: (_: unknown, record: BackendMilestone) => (
+      title: "Địa chỉ (VI / EN)",
+      key: "address",
+      render: (_: unknown, record: BackendLocation) => (
         <div className="flex flex-col max-w-xs text-xs text-zinc-500 space-y-0.5">
-          <span className="line-clamp-1">{record.description_vi}</span>
-          <span className="line-clamp-1 italic text-[11px] text-zinc-400">{record.description_en}</span>
+          <span className="line-clamp-1">{record.address_vi}</span>
+          <span className="line-clamp-1 italic text-[11px] text-zinc-400">{record.address_en}</span>
         </div>
       ),
+    },
+    {
+      title: "Bản đồ",
+      dataIndex: "location_url",
+      key: "location_url",
+      width: 90,
+      render: (url?: string) =>
+        url ? (
+          <a href={url} target="_blank" rel="noreferrer" className="text-amber-500">
+            <LinkOutlined /> Xem link
+          </a>
+        ) : (
+          <span className="text-zinc-400 text-xs">—</span>
+        ),
     },
     {
       title: "Hiển thị",
@@ -178,12 +168,12 @@ export function MilestonesManager() {
       title: "Thao tác",
       key: "action",
       align: "right" as const,
-      render: (_: unknown, record: BackendMilestone) => (
+      render: (_: unknown, record: BackendLocation) => (
         <Space size="small">
           <Button icon={<EditOutlined />} type="text" onClick={() => openModal(record)} className="text-amber-500" />
           <Popconfirm
-            title="Xóa cột mốc"
-            description="Bạn có chắc chắn muốn xóa cột mốc này?"
+            title="Xóa chi nhánh"
+            description="Bạn có chắc chắn muốn xóa chi nhánh này?"
             onConfirm={() => record.id && handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
@@ -202,14 +192,14 @@ export function MilestonesManager() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <TrophyOutlined />
+              <EnvironmentOutlined />
             </div>
             <div>
               <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Quản lý Cột Mốc Lịch Sử
+                Quản lý Chi Nhánh & Bản Đồ
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Quản lý các cột mốc hiển thị trên dòng thời gian ở trang Giới thiệu.
+                Quản lý danh sách cửa hàng (tên, địa chỉ, bản đồ) hiển thị ở trang chủ.
               </p>
             </div>
           </div>
@@ -220,7 +210,7 @@ export function MilestonesManager() {
             onClick={() => openModal()}
             className="font-extrabold text-xs rounded-xl px-5 bg-gradient-to-r from-amber-500 to-amber-600 border-none shadow-md shadow-amber-500/20"
           >
-            Thêm Cột mốc mới
+            Thêm Chi nhánh mới
           </Button>
         </div>
       </Card>
@@ -228,7 +218,7 @@ export function MilestonesManager() {
       <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden">
         <Table
           columns={columns}
-          dataSource={milestones.map((m) => ({ ...m, key: m.id }))}
+          dataSource={locations.map((l) => ({ ...l, key: l.id }))}
           loading={loading}
           pagination={{ pageSize: 8 }}
           className="text-xs"
@@ -236,7 +226,7 @@ export function MilestonesManager() {
       </Card>
 
       <Modal
-        title={editingMilestone ? "Chỉnh sửa Cột mốc" : "Thêm Cột mốc Mới"}
+        title={editingLocation ? "Chỉnh sửa Chi nhánh" : "Thêm Chi nhánh Mới"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
@@ -244,39 +234,45 @@ export function MilestonesManager() {
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
           <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Năm" name="year" rules={[{ required: true, message: "Vui lòng nhập năm!" }]}>
-              <Input placeholder="2024" />
+            <Form.Item label="Tên Chi nhánh (VI)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên VI!" }]}>
+              <Input placeholder="T99 Barbershop - An Khánh" />
             </Form.Item>
-            <Form.Item label="Thứ tự hiển thị" name="position" rules={[{ required: true, message: "Vui lòng nhập thứ tự!" }]}>
-              <InputNumber className="w-full" min={0} />
+            <Form.Item label="Tên Chi nhánh (EN)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên EN!" }]}>
+              <Input placeholder="T99 Barbershop - An Khanh" />
             </Form.Item>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Tiêu đề Cột mốc (VI)" name="title_vi" rules={[{ required: true, message: "Vui lòng nhập tiêu đề VI!" }]}>
-              <Input placeholder="T99 Barbershop Ra Đời" />
+            <Form.Item label="Địa chỉ (VI)" name="address_vi" rules={[{ required: true, message: "Vui lòng nhập địa chỉ VI!" }]}>
+              <TextArea rows={2} placeholder="33/1 Quốc Hương, P. An Khánh, TP. HCM" />
             </Form.Item>
-            <Form.Item label="Tiêu đề Cột mốc (EN)" name="title_en" rules={[{ required: true, message: "Vui lòng nhập tiêu đề EN!" }]}>
-              <Input placeholder="T99 Barbershop Is Born" />
+            <Form.Item label="Địa chỉ (EN)" name="address_en" rules={[{ required: true, message: "Vui lòng nhập địa chỉ EN!" }]}>
+              <TextArea rows={2} placeholder="33/1 Quoc Huong, An Khanh Ward, HCMC" />
             </Form.Item>
           </div>
 
-          <Form.Item label="Mô tả Cột mốc (VI)" name="description_vi">
-            <TextArea rows={2} />
+          <Form.Item
+            label={<span><LinkOutlined /> Link Google Maps</span>}
+            name="location_url"
+            rules={[{ required: true, message: "Vui lòng nhập link Google Maps!" }]}
+            extra="Mở Google Maps, tìm cửa hàng, bấm nút Chia sẻ và dán link vào đây. Hệ thống sẽ tự động xử lý, không cần lấy link nhúng (embed)."
+          >
+            <Input placeholder="https://maps.app.goo.gl/..." />
           </Form.Item>
 
-          <Form.Item label="Mô tả Cột mốc (EN)" name="description_en">
-            <TextArea rows={2} />
-          </Form.Item>
-
-          <Form.Item label="Hiển thị trên Website" name="is_active" valuePropName="checked">
-            <Switch checkedChildren="Hiện" unCheckedChildren="Ẩn" />
-          </Form.Item>
+          <div className="grid grid-cols-2 gap-3">
+            <Form.Item label="Thứ tự hiển thị" name="position" rules={[{ required: true, message: "Vui lòng nhập thứ tự!" }]}>
+              <InputNumber className="w-full" min={0} />
+            </Form.Item>
+            <Form.Item label="Hiển thị trên Website" name="is_active" valuePropName="checked">
+              <Switch checkedChildren="Hiện" unCheckedChildren="Ẩn" />
+            </Form.Item>
+          </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
             <Button onClick={() => setIsModalOpen(false)}>Hủy bỏ</Button>
             <Button type="primary" htmlType="submit" className="bg-amber-500 font-extrabold border-none">
-              Lưu Cột Mốc
+              Lưu Chi nhánh
             </Button>
           </div>
         </Form>

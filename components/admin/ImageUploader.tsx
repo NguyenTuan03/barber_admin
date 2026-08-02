@@ -17,7 +17,7 @@ export function ImageUploader({
   label,
   value,
   onChange,
-  uploadType = "site_settings",
+  uploadType = "site_setting",
 }: ImageUploaderProps) {
   const { message } = AntdApp.useApp();
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -54,7 +54,7 @@ export function ImageUploader({
           <div className="relative w-full h-44 rounded-lg overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
             <Image
               src={value}
-              alt={label}
+              alt={label || "Hình ảnh"}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />

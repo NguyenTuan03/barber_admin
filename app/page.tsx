@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Layout, Card, Spin } from "antd";
+import { useState } from "react";
+import { Layout, Spin } from "antd";
 import { AdminTabEnum, AuthStatusEnum } from "@/enum/AppEnum";
 import { useAuth } from "@/context/AuthContext";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
@@ -52,11 +52,6 @@ export default function AdminDashboardPage() {
           {activeTab === AdminTabEnum.SERVICES && <ServicesManager />}
           {activeTab === AdminTabEnum.PRODUCTS && <ProductsManager />}
           {activeTab === AdminTabEnum.ABOUT && <AboutManager />}
-          {activeTab === AdminTabEnum.USERS && (
-            <Card className="rounded-2xl shadow-sm text-center text-xs text-zinc-500">
-              Quản lý Tài khoản Quản trị viên (Users API Endpoint `/api/v1/admin/users`).
-            </Card>
-          )}
         </Content>
       </Layout>
     </Layout>

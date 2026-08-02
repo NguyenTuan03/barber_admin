@@ -52,11 +52,6 @@ export function AdminSidebar({
       icon: <ProfileOutlined />,
       label: "Giới Thiệu",
     },
-    {
-      key: AdminTabEnum.USERS,
-      icon: <UserOutlined />,
-      label: "Tài khoản Quản trị",
-    },
   ];
 
   return (

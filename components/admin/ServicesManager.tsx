@@ -50,19 +50,30 @@ export function ServicesManager() {
   }, []);
 
   const openModal = (service?: BackendService) => {
-    if (service) {
-      setEditingService(service);
+    setEditingService(service || null);
+    setIsModalOpen(true);
+  };
+
+  // Populate the form only after the Modal (and its Form) have actually
+  // mounted — calling form.setFieldsValue/resetFields from openModal() runs
+  // before the Modal's `open` state change is committed, which logs antd's
+  // "Instance created by useForm is not connected to any Form element"
+  // warning since destroyOnHidden unmounts the Form between opens.
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    if (editingService) {
       form.setFieldsValue({
-        name_vi: service.name_vi || "",
-        name_en: service.name_en || "",
-        description_vi: service.description_vi || "",
-        description_en: service.description_en || "",
-        price: service.price || 100000,
-        duration_minutes: service.duration_minutes || 30,
+        name_vi: editingService.name_vi || "",
+        name_en: editingService.name_en || "",
+        description_vi: editingService.description_vi || "",
+        description_en: editingService.description_en || "",
+        price: editingService.price || 100000,
+        duration_minutes: editingService.duration_minutes || 30,
       });
-      setImageUrl(service.image_url || "");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImageUrl(editingService.image_url || "");
     } else {
-      setEditingService(null);
       form.resetFields();
       form.setFieldsValue({
         price: 100000,
@@ -70,8 +81,8 @@ export function ServicesManager() {
       });
       setImageUrl("");
     }
-    setIsModalOpen(true);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendService>) => {
     try {
@@ -118,7 +129,7 @@ export function ServicesManager() {
       render: (url: string, record: BackendService) =>
         url ? (
           <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
-            <Image src={url} alt={record.name_vi} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
+            <Image src={url} alt={record.name_vi || "Hình ảnh dịch vụ"} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
           </div>
         ) : (
           <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
@@ -192,16 +203,18 @@ export function ServicesManager() {
     <div className="space-y-6 select-none">
       <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <Tag color="warning" icon={<ScissorOutlined />} className="font-extrabold uppercase tracking-widest text-[10px] mb-1 rounded-full px-3 py-0.5 border-amber-500/30">
-              Barber Services API
-            </Tag>
-            <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight m-0">
-              Quản lý Gói Dịch Vụ Cắt Tóc
-            </h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 m-0">
-              Kết nối trực tiếp API Backend `/api/v1/admin/services`.
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+              <ScissorOutlined />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
+                Quản lý Gói Dịch Vụ Cắt Tóc
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
+                Thêm, chỉnh sửa hoặc xoá các dịch vụ hiển thị trên trang Dịch vụ.
+              </p>
+            </div>
           </div>
 
           <Button
@@ -230,7 +243,7 @@ export function ServicesManager() {
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
           <div className="grid grid-cols-2 gap-3">
@@ -260,7 +273,7 @@ export function ServicesManager() {
           </Form.Item>
 
           <div className="mb-4">
-            <ImageUploader label="Hình ảnh Dịch vụ" value={imageUrl} onChange={setImageUrl} uploadType="services" />
+            <ImageUploader label="Hình ảnh Dịch vụ" value={imageUrl} onChange={setImageUrl} uploadType="service" />
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
