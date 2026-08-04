@@ -1,10 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, InputNumber, Switch, Tag, Popconfirm, Space, Card, App as AntdApp } from "antd";
-import { EnvironmentOutlined, PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Switch,
+  Popconfirm,
+  Space,
+  Card,
+  Tooltip,
+  App as AntdApp,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, LinkOutlined } from "@ant-design/icons";
 import { BackendLocation } from "@/types/backendResource";
 import { getAdminLocations, createAdminLocation, updateAdminLocation, deleteAdminLocation } from "@/services/adminApi";
+import { ListToolbar, matchesSearch } from "@/components/admin/ListToolbar";
+import { BilingualCell, DescriptionCell, VisibilityTag } from "@/components/admin/cells";
 
 const { TextArea } = Input;
 
@@ -12,8 +27,10 @@ export function LocationsManager() {
   const { message } = AntdApp.useApp();
   const [locations, setLocations] = useState<BackendLocation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingLocation, setEditingLocation] = useState<BackendLocation | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
   const [form] = Form.useForm();
 
@@ -80,6 +97,7 @@ export function LocationsManager() {
   }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendLocation>) => {
+    setSaving(true);
     try {
       const payload: Partial<BackendLocation> = {
         ...values,
@@ -88,10 +106,10 @@ export function LocationsManager() {
 
       if (editingLocation?.id) {
         await updateAdminLocation(editingLocation.id, payload);
-        message.success("Cập nhật chi nhánh thành công!");
+        message.success("Đã cập nhật chi nhánh.");
       } else {
         await createAdminLocation(payload);
-        message.success("Thêm chi nhánh mới thành công!");
+        message.success("Đã thêm chi nhánh mới.");
       }
 
       setIsModalOpen(false);
@@ -99,13 +117,15 @@ export function LocationsManager() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Thao tác thất bại";
       message.error(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number | string) => {
     try {
       await deleteAdminLocation(id);
-      message.success("Đã xóa chi nhánh!");
+      message.success("Đã xóa chi nhánh.");
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa thất bại";
@@ -113,73 +133,92 @@ export function LocationsManager() {
     }
   };
 
+  const filtered = useMemo(
+    () =>
+      locations.filter((l) =>
+        matchesSearch(search, l.name_vi, l.name_en, l.address_vi, l.address_en)
+      ),
+    [locations, search]
+  );
+
   const columns = [
     {
-      title: "Chi nhánh (VI / EN)",
-      key: "name",
-      render: (_: unknown, record: BackendLocation) => (
-        <div className="flex flex-col">
-          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.name_vi}</span>
-          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.name_en}</span>
-        </div>
+      title: "Thứ tự",
+      dataIndex: "position",
+      key: "position",
+      width: 80,
+      align: "center" as const,
+      sorter: (a: BackendLocation, b: BackendLocation) => (a.position || 0) - (b.position || 0),
+      render: (pos: number) => (
+        <span className="tabular-nums text-slate-500 dark:text-slate-400">{pos}</span>
       ),
     },
     {
-      title: "Địa chỉ (VI / EN)",
+      title: "Chi nhánh",
+      key: "name",
+      render: (_: unknown, record: BackendLocation) => (
+        <BilingualCell vi={record.name_vi} en={record.name_en} />
+      ),
+    },
+    {
+      title: "Địa chỉ",
       key: "address",
       render: (_: unknown, record: BackendLocation) => (
-        <div className="flex flex-col max-w-xs text-xs text-zinc-500 space-y-0.5">
-          <span className="line-clamp-1">{record.address_vi}</span>
-          <span className="line-clamp-1 italic text-[11px] text-zinc-400">{record.address_en}</span>
-        </div>
+        <DescriptionCell vi={record.address_vi} en={record.address_en} />
       ),
     },
     {
       title: "Bản đồ",
       dataIndex: "location_url",
       key: "location_url",
-      width: 90,
+      width: 110,
       render: (url?: string) =>
         url ? (
-          <a href={url} target="_blank" rel="noreferrer" className="text-amber-500">
-            <LinkOutlined /> Xem link
+          <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1">
+            <LinkOutlined /> Mở bản đồ
           </a>
         ) : (
-          <span className="text-zinc-400 text-xs">—</span>
+          <span className="text-slate-400">—</span>
         ),
     },
     {
-      title: "Hiển thị",
+      title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
-      width: 100,
-      render: (active: boolean) =>
-        active ? (
-          <Tag color="success" className="font-bold text-[10px]">
-            Đang hiện
-          </Tag>
-        ) : (
-          <Tag color="default" className="font-bold text-[10px]">
-            Đã ẩn
-          </Tag>
-        ),
+      width: 110,
+      render: (active: boolean) => <VisibilityTag active={active} />,
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
+      width: 88,
       align: "right" as const,
       render: (_: unknown, record: BackendLocation) => (
-        <Space size="small">
-          <Button icon={<EditOutlined />} type="text" onClick={() => openModal(record)} className="text-amber-500" />
+        <Space size={0}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              type="text"
+              aria-label={`Chỉnh sửa ${record.name_vi || "chi nhánh"}`}
+              onClick={() => openModal(record)}
+            />
+          </Tooltip>
           <Popconfirm
             title="Xóa chi nhánh"
-            description="Bạn có chắc chắn muốn xóa chi nhánh này?"
+            description="Chi nhánh sẽ bị gỡ khỏi website. Bạn chắc chắn chứ?"
             onConfirm={() => record.id && handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button icon={<DeleteOutlined />} type="text" danger />
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                type="text"
+                danger
+                aria-label={`Xóa ${record.name_vi || "chi nhánh"}`}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -187,96 +226,95 @@ export function LocationsManager() {
   ];
 
   return (
-    <div className="space-y-6 select-none">
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <EnvironmentOutlined />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Quản lý Chi Nhánh & Bản Đồ
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Quản lý danh sách cửa hàng (tên, địa chỉ, bản đồ) hiển thị ở trang chủ.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openModal()}
-            className="font-extrabold text-xs rounded-xl px-5 bg-gradient-to-r from-amber-500 to-amber-600 border-none shadow-md shadow-amber-500/20"
-          >
-            Thêm Chi nhánh mới
+    <>
+      <Card styles={{ body: { padding: 0 } }}>
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm chi nhánh theo tên hoặc địa chỉ..."
+          shown={filtered.length}
+          total={locations.length}
+        >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            Thêm chi nhánh
           </Button>
-        </div>
-      </Card>
+        </ListToolbar>
 
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden">
         <Table
           columns={columns}
-          dataSource={locations.map((l) => ({ ...l, key: l.id }))}
+          dataSource={filtered.map((l) => ({ ...l, key: l.id }))}
           loading={loading}
-          pagination={{ pageSize: 8 }}
-          className="text-xs"
+          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
+          // Numeric x switches antd to a fixed table layout, so the flexible
+          // columns share the leftover width and long text truncates instead of
+          // pushing the action column off screen.
+          scroll={{ x: 800 }}
+          locale={{
+            emptyText: search
+              ? "Không tìm thấy chi nhánh nào khớp với từ khóa."
+              : "Chưa có chi nhánh nào. Bấm “Thêm chi nhánh” để tạo mục đầu tiên.",
+          }}
         />
       </Card>
 
       <Modal
-        title={editingLocation ? "Chỉnh sửa Chi nhánh" : "Thêm Chi nhánh Mới"}
+        title={editingLocation ? "Chỉnh sửa chi nhánh" : "Thêm chi nhánh"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
+        width={640}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Tên Chi nhánh (VI)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên VI!" }]}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="pt-2">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Tên chi nhánh (Tiếng Việt)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên tiếng Việt." }]}>
               <Input placeholder="T99 Barbershop - An Khánh" />
             </Form.Item>
-            <Form.Item label="Tên Chi nhánh (EN)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên EN!" }]}>
+            <Form.Item label="Tên chi nhánh (English)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên tiếng Anh." }]}>
               <Input placeholder="T99 Barbershop - An Khanh" />
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Địa chỉ (VI)" name="address_vi" rules={[{ required: true, message: "Vui lòng nhập địa chỉ VI!" }]}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Địa chỉ (Tiếng Việt)" name="address_vi" rules={[{ required: true, message: "Vui lòng nhập địa chỉ tiếng Việt." }]}>
               <TextArea rows={2} placeholder="33/1 Quốc Hương, P. An Khánh, TP. HCM" />
             </Form.Item>
-            <Form.Item label="Địa chỉ (EN)" name="address_en" rules={[{ required: true, message: "Vui lòng nhập địa chỉ EN!" }]}>
+            <Form.Item label="Địa chỉ (English)" name="address_en" rules={[{ required: true, message: "Vui lòng nhập địa chỉ tiếng Anh." }]}>
               <TextArea rows={2} placeholder="33/1 Quoc Huong, An Khanh Ward, HCMC" />
             </Form.Item>
           </div>
 
           <Form.Item
-            label={<span><LinkOutlined /> Link Google Maps</span>}
+            label="Link Google Maps"
             name="location_url"
-            rules={[{ required: true, message: "Vui lòng nhập link Google Maps!" }]}
-            extra="Mở Google Maps, tìm cửa hàng, bấm nút Chia sẻ và dán link vào đây. Hệ thống sẽ tự động xử lý, không cần lấy link nhúng (embed)."
+            rules={[{ required: true, message: "Vui lòng nhập link Google Maps." }]}
+            extra="Mở Google Maps, tìm cửa hàng, bấm Chia sẻ và dán link vào đây. Không cần link nhúng (embed)."
           >
-            <Input placeholder="https://maps.app.goo.gl/..." />
+            <Input prefix={<LinkOutlined className="text-slate-400" />} placeholder="https://maps.app.goo.gl/..." />
           </Form.Item>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Thứ tự hiển thị" name="position" rules={[{ required: true, message: "Vui lòng nhập thứ tự!" }]}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item
+              label="Thứ tự hiển thị"
+              name="position"
+              rules={[{ required: true, message: "Vui lòng nhập thứ tự." }]}
+              extra="Số nhỏ hơn hiển thị trước."
+            >
               <InputNumber className="w-full" min={0} />
             </Form.Item>
-            <Form.Item label="Hiển thị trên Website" name="is_active" valuePropName="checked">
+            <Form.Item label="Hiển thị trên website" name="is_active" valuePropName="checked">
               <Switch checkedChildren="Hiện" unCheckedChildren="Ẩn" />
             </Form.Item>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
-            <Button onClick={() => setIsModalOpen(false)}>Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" className="bg-amber-500 font-extrabold border-none">
-              Lưu Chi nhánh
+          <div className="flex justify-end gap-2 border-0 border-t border-solid border-slate-200 pt-4 dark:border-slate-700">
+            <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={saving}>
+              {editingLocation ? "Lưu thay đổi" : "Thêm chi nhánh"}
             </Button>
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

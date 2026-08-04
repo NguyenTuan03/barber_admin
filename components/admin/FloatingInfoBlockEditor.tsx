@@ -72,41 +72,42 @@ export function FloatingInfoBlockEditor({ value, onChange }: FloatingInfoBlockEd
         return (
           <div
             key={meta.type}
-            className="rounded-xl border border-solid border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3"
+            className="space-y-3 rounded-md border border-solid border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40"
           >
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 text-xs font-extrabold uppercase tracking-wide">
-              {meta.icon}
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+              <span className="text-slate-500 dark:text-slate-400">{meta.icon}</span>
               <span>{meta.label}</span>
             </div>
 
             <div>
-              <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
+              <label
+                htmlFor={`${meta.type}-title`}
+                className="mb-1 block text-[13px] text-slate-600 dark:text-slate-400"
+              >
                 Tiêu đề hiển thị
-              </div>
+              </label>
               <Input
-                size="small"
+                id={`${meta.type}-title`}
                 value={block.title}
                 onChange={(e) => updateBlock(meta.type, { ...block, title: e.target.value })}
-                placeholder={`VD: ${meta.label.toUpperCase()}`}
-                className="text-xs rounded-lg"
+                placeholder={`VD: ${meta.label}`}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">
+            <div className="space-y-2">
+              <div className="text-[13px] text-slate-600 dark:text-slate-400">
                 Nội dung (mỗi dòng một mục)
               </div>
 
               {block.content.length === 0 && (
-                <div className="text-[11px] text-zinc-400 italic">
-                  Chưa có dòng nào, bấm &quot;Thêm dòng&quot; bên dưới.
+                <div className="text-[13px] text-slate-500 dark:text-slate-400">
+                  Chưa có dòng nào — bấm &quot;Thêm dòng&quot; bên dưới.
                 </div>
               )}
 
               {block.content.map((line, idx) => (
                 <div key={idx} className="flex items-center gap-1.5">
                   <Input
-                    size="small"
                     value={line}
                     onChange={(e) => {
                       const nextContent = [...block.content];
@@ -114,13 +115,13 @@ export function FloatingInfoBlockEditor({ value, onChange }: FloatingInfoBlockEd
                       updateBlock(meta.type, { ...block, content: nextContent });
                     }}
                     placeholder={meta.placeholder}
-                    className="text-xs rounded-lg"
+                    aria-label={`${meta.label} - dòng ${idx + 1}`}
                   />
                   <Button
-                    size="small"
                     danger
                     type="text"
                     icon={<DeleteOutlined />}
+                    aria-label={`Xóa dòng ${idx + 1} của ${meta.label}`}
                     onClick={() => {
                       const nextContent = block.content.filter((_, i) => i !== idx);
                       updateBlock(meta.type, { ...block, content: nextContent });
@@ -130,11 +131,10 @@ export function FloatingInfoBlockEditor({ value, onChange }: FloatingInfoBlockEd
               ))}
 
               <Button
-                size="small"
                 type="dashed"
                 icon={<PlusOutlined />}
                 onClick={() => updateBlock(meta.type, { ...block, content: [...block.content, ""] })}
-                className="w-full text-xs"
+                className="w-full"
               >
                 Thêm dòng
               </Button>

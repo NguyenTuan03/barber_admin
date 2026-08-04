@@ -1,17 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, Segmented, Input, Button, Spin, App as AntdApp } from "antd";
+import React, { useState, useEffect, useMemo } from "react";
+import { Card, Segmented, Input, Button, Spin, Tag, Tooltip, App as AntdApp } from "antd";
 import {
-  SettingOutlined,
-  SaveOutlined,
-  GlobalOutlined,
   LayoutOutlined,
   InfoCircleOutlined,
   TrophyOutlined,
   ControlOutlined,
   EnvironmentOutlined,
-  CodeOutlined,
 } from "@ant-design/icons";
 import { SiteSettingGroupEnum, SiteSettingKeyEnum } from "@/enum/AppEnum";
 import { SiteSettingItem, SiteSettingsIndexData } from "@/types/siteSetting";
@@ -24,154 +20,169 @@ import { ContactInfoEditor } from "@/components/admin/ContactInfoEditor";
 
 const { TextArea } = Input;
 
+type SettingValue = { value_vi: string; value_en: string };
+type SettingsMap = Record<string, SettingValue>;
+
 interface SettingGroupMeta {
   group: SiteSettingGroupEnum;
   title: string;
-  subtitle: string;
   description: string;
   icon: React.ReactNode;
   keys: {
     key: SiteSettingKeyEnum;
     label: string;
     description: string;
-    type: "text" | "textarea" | "image" | "json" | "floating_info" | "about_stats" | "review_feats" | "contact_info";
+    type: "text" | "textarea" | "image" | "floating_info" | "about_stats" | "review_feats" | "contact_info";
   }[];
 }
 
 const GROUPS_META: SettingGroupMeta[] = [
   {
     group: SiteSettingGroupEnum.HERO,
-    title: "Banner Trang Chủ (Hero)",
-    subtitle: "Hero Title, Subtitle, Background Image",
-    description: "Cấu hình Tiêu đề chính, Dòng khẩu hiệu và Hình ảnh Banner xuất hiện ở đầu website.",
+    title: "Banner trang chủ",
+    description: "Tiêu đề, khẩu hiệu và hình ảnh xuất hiện ở đầu website.",
     icon: <LayoutOutlined />,
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_HERO_TITLE,
-        label: "Tiêu đề Banner Hero (Title)",
-        description: "Dòng chữ tiêu đề lớn thu hút khách hàng ở đầu trang.",
+        label: "Tiêu đề banner",
+        description: "Dòng chữ tiêu đề lớn ở đầu trang.",
         type: "text",
       },
       {
         key: SiteSettingKeyEnum.HOME_HERO_SUBTITLE,
-        label: "Dòng Phụ đề (Subtitle)",
-        description: "Đoạn văn miêu tả khẩu hiệu/slogan bên dưới tiêu đề.",
+        label: "Phụ đề",
+        description: "Đoạn khẩu hiệu ngắn bên dưới tiêu đề.",
         type: "textarea",
       },
       {
         key: SiteSettingKeyEnum.HOME_HERO_IMAGE_URL,
-        label: "Hình ảnh Banner (Hero Image)",
-        description: "Đường dẫn ảnh minh họa hoặc hình nền cho Banner Hero.",
+        label: "Hình ảnh banner",
+        description: "Ảnh nền cho khối banner đầu trang.",
         type: "image",
       },
     ],
   },
   {
     group: SiteSettingGroupEnum.FLOATING_INFO,
-    title: "Khối Thông Tin Nổi",
-    subtitle: "Floating Info Block (Hours, Address, Phone)",
-    description: "Cấu hình khối thông tin địa chỉ, hotline & giờ mở cửa nổi ở trang chủ.",
+    title: "Khối thông tin nổi",
+    description: "Địa chỉ, hotline và giờ mở cửa hiển thị nổi ở trang chủ.",
     icon: <InfoCircleOutlined />,
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_FLOATING_INFO_BLOCK,
-        label: "Khối Thông Tin Nổi",
-        description: "Nhập tiêu đề và nội dung cho từng mục Địa chỉ, Điện thoại, Giờ mở cửa.",
+        label: "Nội dung khối thông tin",
+        description: "Tiêu đề và các dòng nội dung cho Địa chỉ, Điện thoại, Giờ mở cửa.",
         type: "floating_info",
       },
     ],
   },
   {
     group: SiteSettingGroupEnum.ABOUT_SERVICE,
-    title: "Giới Thiệu & Con Số Thống Kê",
-    subtitle: "About Title, Description, Stats JSON",
-    description: "Cấu hình phần giới thiệu thương hiệu và các chỉ số thống kê ấn tượng.",
+    title: "Giới thiệu & số liệu",
+    description: "Phần giới thiệu thương hiệu và các chỉ số nổi bật.",
     icon: <TrophyOutlined />,
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_ABOUT_SERVICE_TITLE,
-        label: "Tiêu đề Giới thiệu (About Title)",
+        label: "Tiêu đề giới thiệu",
         description: "Tiêu đề cho khối giới thiệu thương hiệu.",
         type: "text",
       },
       {
         key: SiteSettingKeyEnum.HOME_ABOUT_SERVICE_DESCRIPTION,
-        label: "Nội dung Giới thiệu (About Description)",
-        description: "Bài viết ngắn giới thiệu về đẳng cấp dịch vụ của T99 Barbershop.",
+        label: "Nội dung giới thiệu",
+        description: "Đoạn giới thiệu ngắn về dịch vụ của T99 Barbershop.",
         type: "textarea",
       },
       {
         key: SiteSettingKeyEnum.HOME_ABOUT_SERVICE_STATS,
         label: "Các con số thống kê",
-        description: "Danh sách chỉ số nổi bật (VD: 300.000+ Sản phẩm chính hãng, 10+ Năm kinh nghiệm...).",
+        description: "Chỉ số nổi bật, ví dụ “10+ năm kinh nghiệm”.",
         type: "about_stats",
       },
       {
         key: SiteSettingKeyEnum.HOME_ABOUT_SERVICE_IMAGE,
-        label: "Hình ảnh Giới thiệu",
-        description: "Ảnh minh họa hiển thị bên cạnh phần giới thiệu thương hiệu.",
+        label: "Hình ảnh giới thiệu",
+        description: "Ảnh hiển thị bên cạnh phần giới thiệu.",
         type: "image",
       },
     ],
   },
   {
     group: SiteSettingGroupEnum.SERVICES,
-    title: "Mô tả Dịch Vụ & Banner Khuyến Mãi",
-    subtitle: "Services Description, Promo Title & Image",
-    description: "Cấu hình mô tả tổng quan gói dịch vụ và banner chương trình ưu đãi đặc biệt.",
+    title: "Dịch vụ & khuyến mãi",
+    description: "Mô tả tổng quan gói dịch vụ và banner chương trình ưu đãi.",
     icon: <ControlOutlined />,
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_SERVICE_DESCRIPTION,
-        label: "Mô tả Khối Dịch Vụ",
+        label: "Mô tả khối dịch vụ",
         description: "Đoạn mô tả cam kết chất lượng sản phẩm & dịch vụ.",
         type: "textarea",
       },
       {
         key: SiteSettingKeyEnum.HOME_PROMO_TITLE,
-        label: "Tiêu đề Chương Trình Khuyến Mãi (Promo Title)",
+        label: "Tiêu đề khuyến mãi",
         description: "Tiêu đề nổi bật cho banner ưu đãi.",
         type: "text",
       },
       {
         key: SiteSettingKeyEnum.HOME_PROMO_BG_IMAGE,
-        label: "Ảnh Nền Khuyến Mãi (Promo Background Image)",
-        description: "Đường dẫn ảnh nền chương trình ưu đãi.",
+        label: "Ảnh nền khuyến mãi",
+        description: "Ảnh nền cho banner chương trình ưu đãi.",
         type: "image",
       },
     ],
   },
   {
     group: SiteSettingGroupEnum.REVIEWS,
-    title: "Đánh Giá & Liên Hệ",
-    subtitle: "Review Feats, Contact Info",
-    description: "Cấu hình tiêu chí chất lượng và thông tin đặt lịch. Bản đồ chi nhánh đã chuyển sang mục \"Chi nhánh & Bản đồ\".",
+    title: "Đánh giá & liên hệ",
+    description: "Tiêu chí chất lượng và thông tin đặt lịch hiển thị ở cuối trang chủ.",
     icon: <EnvironmentOutlined />,
     keys: [
       {
         key: SiteSettingKeyEnum.HOME_REVIEW_FEATS,
-        label: "Các Tiêu chí Đánh giá",
-        description: "3 điểm nổi bật hiển thị phía trên khu vực đánh giá (Giấy phép, Thợ chính, Bảo hành).",
+        label: "Tiêu chí đánh giá",
+        description: "3 điểm nổi bật phía trên khu vực đánh giá.",
         type: "review_feats",
       },
       {
         key: SiteSettingKeyEnum.HOME_CONTACT_INFO,
-        label: "Thông tin Đặt lịch & Liên hệ",
-        description: "Danh sách email, số điện thoại hoặc hotline đặt lịch.",
+        label: "Thông tin đặt lịch & liên hệ",
+        description: "Email, số điện thoại hoặc hotline đặt lịch.",
         type: "contact_info",
       },
     ],
   },
 ];
 
+const isSameValue = (a?: SettingValue, b?: SettingValue) =>
+  (a?.value_vi ?? "") === (b?.value_vi ?? "") && (a?.value_en ?? "") === (b?.value_en ?? "");
+
+/** Values that look like JSON are sent as objects; everything else stays a string. */
+const toPayload = (raw: string): unknown => {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return raw;
+    }
+  }
+  return raw;
+};
+
 export function SiteSettingsManager() {
   const { message } = AntdApp.useApp();
   const [activeGroup, setActiveGroup] = useState<SiteSettingGroupEnum>(SiteSettingGroupEnum.HERO);
   const [activeLang, setActiveLang] = useState<"vi" | "en">("vi");
   const [loading, setLoading] = useState<boolean>(true);
-  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
-  const [settingsData, setSettingsData] = useState<Record<string, { value_vi: string; value_en: string }>>({});
+  const [settingsData, setSettingsData] = useState<SettingsMap>({});
+  // Last known server state, used to work out which fields still need saving.
+  const [savedData, setSavedData] = useState<SettingsMap>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -179,7 +190,7 @@ export function SiteSettingsManager() {
       .then((data: SiteSettingsIndexData) => {
         if (!isMounted) return;
 
-        const initialMap: Record<string, { value_vi: string; value_en: string }> = {};
+        const initialMap: SettingsMap = {};
 
         data.allowed_keys.forEach((key) => {
           initialMap[key] = { value_vi: "", value_en: "" };
@@ -189,13 +200,11 @@ export function SiteSettingsManager() {
           const valVi = typeof item.value_vi === "object" ? JSON.stringify(item.value_vi, null, 2) : String(item.value_vi || "");
           const valEn = typeof item.value_en === "object" ? JSON.stringify(item.value_en, null, 2) : String(item.value_en || "");
 
-          initialMap[item.key] = {
-            value_vi: valVi,
-            value_en: valEn,
-          };
+          initialMap[item.key] = { value_vi: valVi, value_en: valEn };
         });
 
         setSettingsData(initialMap);
+        setSavedData(initialMap);
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -208,256 +217,221 @@ export function SiteSettingsManager() {
     };
   }, []);
 
-  const handleInputChange = (key: string, field: "value_vi" | "value_en", value: string) => {
+  const dirtyKeys = useMemo(
+    () => Object.keys(settingsData).filter((key) => !isSameValue(settingsData[key], savedData[key])),
+    [settingsData, savedData]
+  );
+
+  // Edits live in component state until saved, so a full page reload would throw
+  // them away without any warning otherwise.
+  useEffect(() => {
+    if (dirtyKeys.length === 0) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirtyKeys.length]);
+
+  const handleInputChange = (key: string, value: string) => {
+    const field = activeLang === "vi" ? "value_vi" : "value_en";
     setSettingsData((prev) => ({
       ...prev,
-      [key]: {
-        ...prev[key],
-        [field]: value,
-      },
+      [key]: { ...prev[key], [field]: value },
     }));
   };
 
-  const handleSaveSetting = async (key: string) => {
-    const data = settingsData[key];
-    if (!data) return;
+  const handleSaveAll = async () => {
+    if (dirtyKeys.length === 0) return;
 
-    setSavingKey(key);
-    try {
-      let valViToSave: unknown = data.value_vi;
-      let valEnToSave: unknown = data.value_en;
+    setSaving(true);
+    const failed: string[] = [];
+    const succeeded: string[] = [];
 
-      if (data.value_vi.trim().startsWith("[") || data.value_vi.trim().startsWith("{")) {
-        try {
-          valViToSave = JSON.parse(data.value_vi);
-        } catch {
-          // keep as string
-        }
+    for (const key of dirtyKeys) {
+      const data = settingsData[key];
+      try {
+        await saveAdminSiteSetting(key, toPayload(data.value_vi), toPayload(data.value_en));
+        succeeded.push(key);
+      } catch (err: unknown) {
+        console.error(`Failed to save site setting '${key}':`, err);
+        failed.push(key);
       }
-
-      if (data.value_en.trim().startsWith("[") || data.value_en.trim().startsWith("{")) {
-        try {
-          valEnToSave = JSON.parse(data.value_en);
-        } catch {
-          // keep as string
-        }
-      }
-
-      await saveAdminSiteSetting(key, valViToSave, valEnToSave);
-      message.success(`Đã lưu cấu hình '${key}' lên Backend thành công!`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lưu cấu hình thất bại";
-      message.error(`Lỗi: ${msg}`);
-    } finally {
-      setSavingKey(null);
     }
+
+    if (succeeded.length > 0) {
+      setSavedData((prev) => {
+        const next = { ...prev };
+        succeeded.forEach((key) => {
+          next[key] = settingsData[key];
+        });
+        return next;
+      });
+    }
+
+    if (failed.length === 0) {
+      message.success(`Đã lưu ${succeeded.length} thay đổi.`);
+    } else if (succeeded.length === 0) {
+      message.error("Không lưu được thay đổi nào. Vui lòng thử lại.");
+    } else {
+      message.warning(`Đã lưu ${succeeded.length} mục, ${failed.length} mục lưu thất bại.`);
+    }
+
+    setSaving(false);
   };
 
   const currentGroupMeta = GROUPS_META.find((g) => g.group === activeGroup) || GROUPS_META[0];
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-28 gap-3">
+      <div className="flex flex-col items-center justify-center gap-3 py-24">
         <Spin size="large" />
-        <p className="text-xs font-bold tracking-wider text-zinc-500 uppercase">
-          Đang kết nối Rails API Backend lấy 13 cấu hình...
-        </p>
+        <p className="m-0 text-sm text-slate-500 dark:text-slate-400">Đang tải nội dung trang chủ...</p>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6 select-none">
-      {/* Top Banner Header Card */}
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <SettingOutlined />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Cấu hình Giao diện Trang chủ
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Quản lý banner, thông tin nổi bật và nội dung hiển thị ở trang chủ.
-              </p>
-            </div>
-          </div>
+  const renderControl = (
+    config: SettingGroupMeta["keys"][number],
+    currentValue: string
+  ) => {
+    const onChange = (next: string) => handleInputChange(config.key, next);
 
-          {/* Bilingual Language Switcher with Segmented */}
-          <Segmented
-            value={activeLang}
-            onChange={(val) => setActiveLang(val as "vi" | "en")}
-            options={[
-              { label: "🇻🇳 Tiếng Việt (VI)", value: "vi" },
-              { label: "🇬🇧 Tiếng Anh (EN)", value: "en" },
-            ]}
-            className="font-extrabold text-xs"
+    switch (config.type) {
+      case "floating_info":
+        return <FloatingInfoBlockEditor value={currentValue} onChange={onChange} />;
+      case "about_stats":
+        return <AboutServiceStatsEditor value={currentValue} onChange={onChange} />;
+      case "review_feats":
+        return <ReviewFeatsEditor value={currentValue} onChange={onChange} />;
+      case "contact_info":
+        return <ContactInfoEditor value={currentValue} onChange={onChange} />;
+      case "image":
+        // The field row above already renders the label.
+        return <ImageUploader value={currentValue} onChange={onChange} />;
+      case "textarea":
+        return (
+          <TextArea
+            id={config.key}
+            rows={3}
+            value={currentValue}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={`Nhập ${config.label.toLowerCase()}...`}
           />
-        </div>
-      </Card>
+        );
+      default:
+        return (
+          <Input
+            id={config.key}
+            value={currentValue}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={`Nhập ${config.label.toLowerCase()}...`}
+          />
+        );
+    }
+  };
 
-      {/* Main Form Layout: Group Menu + Form Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Left Side Group Menu */}
-        <div className="space-y-2">
-          <div className="px-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
-            Khối Cấu hình (Groups)
-          </div>
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      {/* Group navigation */}
+      <nav aria-label="Khối nội dung trang chủ" className="flex flex-col gap-1">
+        {GROUPS_META.map((meta) => {
+          const isActive = activeGroup === meta.group;
+          const groupDirty = meta.keys.filter((k) => dirtyKeys.includes(k.key)).length;
 
-          {GROUPS_META.map((meta) => {
-            const isActive = activeGroup === meta.group;
-            return (
-              <button
-                key={meta.group}
-                onClick={() => setActiveGroup(meta.group)}
-                className={`w-full flex items-center justify-between p-3.5 rounded-xl text-left transition-all duration-200 border-none cursor-pointer ${
-                  isActive
-                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-zinc-950 shadow-md font-extrabold"
-                    : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-base">{meta.icon}</span>
-                  <span className="text-xs font-bold tracking-tight">{meta.title}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={meta.group}
+              type="button"
+              onClick={() => setActiveGroup(meta.group)}
+              aria-current={isActive ? "true" : undefined}
+              className={`flex w-full cursor-pointer items-center gap-2.5 rounded-md border-0 px-3 py-2.5 text-left text-sm transition-colors duration-200 ${
+                isActive
+                  ? "bg-blue-50 font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                  : "bg-transparent text-slate-700 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-700/60"
+              }`}
+            >
+              <span className="shrink-0 text-base">{meta.icon}</span>
+              <span className="min-w-0 flex-1">{meta.title}</span>
+              {groupDirty > 0 && (
+                <Tooltip title={`${groupDirty} thay đổi chưa lưu`}>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                </Tooltip>
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
-        {/* Right Side Form Cards */}
-        <div className="md:col-span-3 space-y-6">
-          <Card
-            title={
-              <div className="flex items-center gap-2 text-xs font-extrabold text-amber-600 dark:text-amber-500 uppercase tracking-wider">
-                <GlobalOutlined />
-                <span>
-                  Đang soạn thảo: {activeLang === "vi" ? "Tiếng Việt (value_vi)" : "Tiếng Anh (value_en)"}
-                </span>
-              </div>
-            }
-            className="rounded-2xl shadow-xs border-solid border-zinc-200 dark:border-zinc-800"
-          >
-            <div className="mb-6 pb-4 border-b border-solid border-zinc-200 dark:border-zinc-800">
-              <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100 m-0">
+      {/* Fields for the selected group */}
+      <div className="md:col-span-3">
+        <Card
+          title={
+            <div className="py-3">
+              <div className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 {currentGroupMeta.title}
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 m-0">{currentGroupMeta.description}</p>
+              </div>
+              <div className="mt-0.5 text-sm font-normal whitespace-normal text-slate-600 dark:text-slate-400">
+                {currentGroupMeta.description}
+              </div>
             </div>
+          }
+          extra={
+            <Segmented
+              value={activeLang}
+              onChange={(val) => setActiveLang(val as "vi" | "en")}
+              options={[
+                { label: "Tiếng Việt", value: "vi" },
+                { label: "English", value: "en" },
+              ]}
+            />
+          }
+        >
+          <div className="space-y-6">
+            {currentGroupMeta.keys.map((config) => {
+              const currentData = settingsData[config.key] || { value_vi: "", value_en: "" };
+              const currentValue = activeLang === "vi" ? currentData.value_vi : currentData.value_en;
+              const isDirty = dirtyKeys.includes(config.key);
 
-            <div className="space-y-6">
-              {currentGroupMeta.keys.map((config) => {
-                const currentData = settingsData[config.key] || { value_vi: "", value_en: "" };
-                const currentValue = activeLang === "vi" ? currentData.value_vi : currentData.value_en;
-                const isSavingThis = savingKey === config.key;
-
-                return (
-                  <div
-                    key={config.key}
-                    className="p-4 rounded-xl border border-solid border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/60 dark:bg-zinc-900/40 space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-200 uppercase tracking-wide">
-                          {config.label}
-                        </span>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 m-0">
-                          {config.description}
-                        </p>
-                      </div>
-
-                      <Button
-                        type="primary"
-                        icon={<SaveOutlined />}
-                        loading={isSavingThis}
-                        onClick={() => handleSaveSetting(config.key)}
-                        className="bg-amber-500 hover:bg-amber-600 font-extrabold text-xs rounded-lg px-4 border-none shadow-xs"
-                      >
-                        Lưu {config.label}
-                      </Button>
-                    </div>
-
-                    {/* Control input rendering */}
-                    {config.type === "floating_info" ? (
-                      <FloatingInfoBlockEditor
-                        value={currentValue}
-                        onChange={(newJson: string) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
-                        }
-                      />
-                    ) : config.type === "about_stats" ? (
-                      <AboutServiceStatsEditor
-                        value={currentValue}
-                        onChange={(newJson: string) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
-                        }
-                      />
-                    ) : config.type === "review_feats" ? (
-                      <ReviewFeatsEditor
-                        value={currentValue}
-                        onChange={(newJson: string) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
-                        }
-                      />
-                    ) : config.type === "contact_info" ? (
-                      <ContactInfoEditor
-                        value={currentValue}
-                        onChange={(newJson: string) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newJson)
-                        }
-                      />
-                    ) : config.type === "image" ? (
-                      <ImageUploader
-                        label="Hình ảnh S3 URL"
-                        value={currentValue}
-                        onChange={(newUrl: string) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", newUrl)
-                        }
-                      />
-                    ) : config.type === "textarea" ? (
-                      <TextArea
-                        rows={3}
-                        value={currentValue}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", e.target.value)
-                        }
-                        placeholder={`Nhập ${config.label} (${activeLang.toUpperCase()})...`}
-                        className="text-xs rounded-lg"
-                      />
-                    ) : config.type === "json" ? (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-500 font-mono font-bold">
-                          <CodeOutlined /> Chuỗi JSON hợp lệ
-                        </div>
-                        <TextArea
-                          rows={6}
-                          value={currentValue}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                            handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", e.target.value)
-                          }
-                          placeholder="[ { &quot;title&quot;: &quot;...&quot;, &quot;content&quot;: &quot;...&quot; } ]"
-                          className="font-mono text-xs text-amber-500 rounded-lg"
-                        />
-                      </div>
-                    ) : (
-                      <Input
-                        type="text"
-                        value={currentValue}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleInputChange(config.key, activeLang === "vi" ? "value_vi" : "value_en", e.target.value)
-                        }
-                        placeholder={`Nhập ${config.label} (${activeLang.toUpperCase()})...`}
-                        className="text-xs rounded-lg"
-                      />
+              return (
+                <div key={config.key} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor={config.key}
+                      className="text-sm font-medium text-slate-900 dark:text-slate-100"
+                    >
+                      {config.label}
+                    </label>
+                    {isDirty && (
+                      <Tag color="warning" variant="filled" className="m-0">
+                        Chưa lưu
+                      </Tag>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          </Card>
-        </div>
+                  <p className="m-0 text-[13px] text-slate-600 dark:text-slate-400">
+                    {config.description}
+                  </p>
+                  {renderControl(config, currentValue)}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Save bar: one action for every pending edit, across all groups. */}
+          <div className="sticky bottom-0 -mx-6 -mb-6 mt-6 flex flex-col gap-2 border-0 border-t border-solid border-slate-200 bg-white px-6 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700 dark:bg-slate-800">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              {dirtyKeys.length === 0
+                ? "Đã lưu toàn bộ thay đổi."
+                : `${dirtyKeys.length} mục chưa lưu (tính cả các khối khác).`}
+            </span>
+            <Button
+              type="primary"
+              onClick={handleSaveAll}
+              loading={saving}
+              disabled={dirtyKeys.length === 0}
+            >
+              Lưu thay đổi
+            </Button>
+          </div>
+        </Card>
       </div>
     </div>
   );

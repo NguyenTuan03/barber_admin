@@ -6,6 +6,8 @@ import { AdminTabEnum, AuthStatusEnum } from "@/enum/AppEnum";
 import { useAuth } from "@/context/AuthContext";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { AdminHeader } from "@/components/layout/AdminHeader";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { getNavItem } from "@/components/layout/adminNav";
 import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
 import { HomeManager } from "@/components/admin/HomeManager";
 import { ServicesManager } from "@/components/admin/ServicesManager";
@@ -17,14 +19,15 @@ const { Content } = Layout;
 export default function AdminDashboardPage() {
   const { authStatus } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTabEnum>(AdminTabEnum.HOME);
+  const [collapsed, setCollapsed] = useState<boolean>(false);
 
   // 1. Loading state
   if (authStatus === AuthStatusEnum.LOADING) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-100 dark:bg-zinc-950 gap-3">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3">
         <Spin size="large" />
-        <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
-          Đang kiểm tra phiên làm việc Admin...
+        <span className="text-sm text-slate-500 dark:text-slate-400">
+          Đang kiểm tra phiên đăng nhập...
         </span>
       </div>
     );
@@ -36,22 +39,38 @@ export default function AdminDashboardPage() {
   }
 
   // 3. Authenticated state -> Render Admin Dashboard
+  const currentSection = getNavItem(activeTab);
+
   return (
-    <Layout className="min-h-screen">
-      {/* Sidebar Navigation */}
-      <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+    // Inline height: antd's own `.ant-layout { min-height: 0 }` is injected after
+    // Tailwind's stylesheet, so a `min-h-screen` class here loses to it.
+    <Layout style={{ minHeight: "100vh" }}>
+      <AdminSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        collapsed={collapsed}
+        onCollapsedChange={setCollapsed}
+      />
 
-      {/* Main Content Layout */}
-      <Layout className="flex-1 flex flex-col min-w-0">
-        {/* Top Header */}
-        <AdminHeader />
+      <Layout className="flex min-w-0 flex-1 flex-col">
+        <AdminHeader
+          title={currentSection.label}
+          collapsed={collapsed}
+          onToggleCollapsed={() => setCollapsed((prev) => !prev)}
+        />
 
-        {/* Dynamic Body Content */}
-        <Content className="p-6 overflow-y-auto">
-          {activeTab === AdminTabEnum.HOME && <HomeManager />}
-          {activeTab === AdminTabEnum.SERVICES && <ServicesManager />}
-          {activeTab === AdminTabEnum.PRODUCTS && <ProductsManager />}
-          {activeTab === AdminTabEnum.ABOUT && <AboutManager />}
+        <Content className="overflow-y-auto p-4 lg:p-6">
+          <div className="mx-auto max-w-7xl space-y-5">
+            <PageHeader
+              title={currentSection.label}
+              description={currentSection.description}
+            />
+
+            {activeTab === AdminTabEnum.HOME && <HomeManager />}
+            {activeTab === AdminTabEnum.SERVICES && <ServicesManager />}
+            {activeTab === AdminTabEnum.PRODUCTS && <ProductsManager />}
+            {activeTab === AdminTabEnum.ABOUT && <AboutManager />}
+          </div>
         </Content>
       </Layout>
     </Layout>

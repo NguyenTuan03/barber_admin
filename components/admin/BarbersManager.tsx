@@ -1,13 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, InputNumber, Switch, Tag, Popconfirm, Space, Card, App as AntdApp } from "antd";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  UserOutlined,
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Switch,
+  Popconfirm,
+  Space,
+  Card,
+  Tooltip,
+  App as AntdApp,
+} from "antd";
+import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  StarOutlined,
   InstagramOutlined,
   TwitterOutlined,
   FacebookOutlined,
@@ -15,14 +26,23 @@ import {
 import { BackendBarber } from "@/types/backendResource";
 import { getAdminBarbers, createAdminBarber, updateAdminBarber, deleteAdminBarber } from "@/services/adminApi";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import Image from "next/image";
+import { ListToolbar, matchesSearch } from "@/components/admin/ListToolbar";
+import { Thumbnail, BilingualCell, DescriptionCell, VisibilityTag } from "@/components/admin/cells";
+
+const SOCIAL_LINKS: { key: keyof BackendBarber; label: string; icon: React.ReactNode }[] = [
+  { key: "instagram_url", label: "Instagram", icon: <InstagramOutlined /> },
+  { key: "twitter_url", label: "Twitter/X", icon: <TwitterOutlined /> },
+  { key: "facebook_url", label: "Facebook", icon: <FacebookOutlined /> },
+];
 
 export function BarbersManager() {
   const { message } = AntdApp.useApp();
   const [barbers, setBarbers] = useState<BackendBarber[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingBarber, setEditingBarber] = useState<BackendBarber | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
   const [form] = Form.useForm();
   const [avatarUrl, setAvatarUrl] = useState<string>("");
@@ -97,6 +117,7 @@ export function BarbersManager() {
   }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendBarber>) => {
+    setSaving(true);
     try {
       const payload: Partial<BackendBarber> = {
         ...values,
@@ -107,10 +128,10 @@ export function BarbersManager() {
 
       if (editingBarber?.id) {
         await updateAdminBarber(editingBarber.id, payload);
-        message.success("Cập nhật hồ sơ thợ thành công!");
+        message.success("Đã cập nhật hồ sơ thợ.");
       } else {
         await createAdminBarber(payload);
-        message.success("Thêm thợ mới thành công!");
+        message.success("Đã thêm thợ mới.");
       }
 
       setIsModalOpen(false);
@@ -118,13 +139,15 @@ export function BarbersManager() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Thao tác thất bại";
       message.error(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number | string) => {
     try {
       await deleteAdminBarber(id);
-      message.success("Đã xóa hồ sơ thợ!");
+      message.success("Đã xóa hồ sơ thợ.");
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa thất bại";
@@ -132,104 +155,114 @@ export function BarbersManager() {
     }
   };
 
+  const filtered = useMemo(
+    () =>
+      barbers.filter((b) => matchesSearch(search, b.name_vi, b.name_en, b.role_vi, b.role_en)),
+    [barbers, search]
+  );
+
   const columns = [
     {
-      title: "Ảnh Đại diện",
+      title: "Ảnh",
       dataIndex: "avatar_url",
       key: "avatar_url",
-      width: 90,
-      render: (url: string, record: BackendBarber) =>
-        url ? (
-          <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
-            <Image src={url} alt={record.name_vi || "Ảnh đại diện thợ"} fill className="object-cover object-top transition-transform duration-500 group-hover:scale-110" />
-          </div>
-        ) : (
-          <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
-            <UserOutlined />
-          </div>
-        ),
-    },
-    {
-      title: "Thợ Cắt Tóc (VI / EN)",
-      key: "name",
-      render: (_: unknown, record: BackendBarber) => (
-        <div className="flex flex-col">
-          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.name_vi}</span>
-          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.name_en}</span>
-        </div>
+      width: 80,
+      render: (url: string, record: BackendBarber) => (
+        <Thumbnail url={url} alt={record.name_vi || "Ảnh đại diện thợ"} className="object-top" />
       ),
     },
     {
-      title: "Chức danh (VI / EN)",
+      title: "Thợ cắt tóc",
+      key: "name",
+      render: (_: unknown, record: BackendBarber) => (
+        <BilingualCell vi={record.name_vi} en={record.name_en} />
+      ),
+    },
+    {
+      title: "Chức danh",
       key: "role",
       render: (_: unknown, record: BackendBarber) => (
-        <div className="flex flex-col max-w-xs text-xs text-zinc-500 space-y-0.5">
-          <span className="line-clamp-1">{record.role_vi}</span>
-          <span className="line-clamp-1 italic text-[11px] text-zinc-400">{record.role_en}</span>
-        </div>
+        <DescriptionCell vi={record.role_vi} en={record.role_en} />
       ),
     },
     {
       title: "Kinh nghiệm",
       dataIndex: "years_of_experience",
       key: "years_of_experience",
-      width: 110,
+      width: 120,
+      align: "right" as const,
+      sorter: (a: BackendBarber, b: BackendBarber) =>
+        (a.years_of_experience || 0) - (b.years_of_experience || 0),
       render: (years?: number) =>
         years ? (
-          <Tag icon={<StarOutlined />} color="warning" className="font-mono text-xs font-extrabold border-amber-500/30">
-            {years} năm
-          </Tag>
+          <span className="tabular-nums text-slate-600 dark:text-slate-400">{years} năm</span>
         ) : (
-          <span className="text-zinc-400 text-xs">—</span>
+          <span className="text-slate-400">—</span>
         ),
     },
     {
       title: "Mạng xã hội",
       key: "social",
-      width: 110,
-      render: (_: unknown, record: BackendBarber) => (
-        <Space size="small">
-          {record.instagram_url && <InstagramOutlined className="text-amber-500" />}
-          {record.twitter_url && <TwitterOutlined className="text-amber-500" />}
-          {record.facebook_url && <FacebookOutlined className="text-amber-500" />}
-          {!record.instagram_url && !record.twitter_url && !record.facebook_url && (
-            <span className="text-zinc-400 text-xs">—</span>
-          )}
-        </Space>
-      ),
+      width: 130,
+      render: (_: unknown, record: BackendBarber) => {
+        const links = SOCIAL_LINKS.filter((social) => record[social.key]);
+        if (links.length === 0) return <span className="text-slate-400">—</span>;
+        return (
+          <Space size="middle">
+            {links.map((social) => (
+              <Tooltip key={social.key} title={social.label}>
+                <a
+                  href={String(record[social.key])}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${social.label} của ${record.name_vi || "thợ"}`}
+                >
+                  {social.icon}
+                </a>
+              </Tooltip>
+            ))}
+          </Space>
+        );
+      },
     },
     {
-      title: "Hiển thị",
+      title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
-      width: 100,
-      render: (active: boolean) =>
-        active ? (
-          <Tag color="success" className="font-bold text-[10px]">
-            Đang hiện
-          </Tag>
-        ) : (
-          <Tag color="default" className="font-bold text-[10px]">
-            Đã ẩn
-          </Tag>
-        ),
+      width: 110,
+      render: (active: boolean) => <VisibilityTag active={active} />,
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
+      width: 88,
       align: "right" as const,
       render: (_: unknown, record: BackendBarber) => (
-        <Space size="small">
-          <Button icon={<EditOutlined />} type="text" onClick={() => openModal(record)} className="text-amber-500" />
+        <Space size={0}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              type="text"
+              aria-label={`Chỉnh sửa ${record.name_vi || "thợ"}`}
+              onClick={() => openModal(record)}
+            />
+          </Tooltip>
           <Popconfirm
             title="Xóa hồ sơ thợ"
-            description="Bạn có chắc chắn muốn xóa thợ này?"
+            description="Hồ sơ sẽ bị gỡ khỏi website. Bạn chắc chắn chứ?"
             onConfirm={() => record.id && handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button icon={<DeleteOutlined />} type="text" danger />
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                type="text"
+                danger
+                aria-label={`Xóa ${record.name_vi || "thợ"}`}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -237,107 +270,106 @@ export function BarbersManager() {
   ];
 
   return (
-    <div className="space-y-6 select-none">
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <UserOutlined />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Quản lý Đội Ngũ Thợ Cắt Tóc
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Quản lý thông tin đội ngũ thợ hiển thị ở trang chủ và trang Giới thiệu.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openModal()}
-            className="font-extrabold text-xs rounded-xl px-5 bg-gradient-to-r from-amber-500 to-amber-600 border-none shadow-md shadow-amber-500/20"
-          >
-            Thêm Thợ mới
+    <>
+      <Card styles={{ body: { padding: 0 } }}>
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm thợ theo tên hoặc chức danh..."
+          shown={filtered.length}
+          total={barbers.length}
+        >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            Thêm thợ
           </Button>
-        </div>
-      </Card>
+        </ListToolbar>
 
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden">
         <Table
           columns={columns}
-          dataSource={barbers.map((b) => ({ ...b, key: b.id }))}
+          dataSource={filtered.map((b) => ({ ...b, key: b.id }))}
           loading={loading}
-          pagination={{ pageSize: 8 }}
-          className="text-xs"
+          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
+          // Numeric x switches antd to a fixed table layout, so the flexible
+          // columns share the leftover width and long text truncates instead of
+          // pushing the action column off screen.
+          scroll={{ x: 900 }}
+          locale={{
+            emptyText: search
+              ? "Không tìm thấy thợ nào khớp với từ khóa."
+              : "Chưa có thợ nào. Bấm “Thêm thợ” để tạo hồ sơ đầu tiên.",
+          }}
         />
       </Card>
 
       <Modal
-        title={editingBarber ? "Chỉnh sửa Hồ sơ Thợ" : "Thêm Thợ Mới"}
+        title={editingBarber ? "Chỉnh sửa hồ sơ thợ" : "Thêm thợ"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
+        width={640}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Tên Thợ (VI)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên VI!" }]}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="pt-2">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Tên thợ (Tiếng Việt)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên tiếng Việt." }]}>
               <Input placeholder="Nguyễn Văn A" />
             </Form.Item>
-            <Form.Item label="Tên Thợ (EN)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên EN!" }]}>
+            <Form.Item label="Tên thợ (English)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên tiếng Anh." }]}>
               <Input placeholder="Arthur Pendelton" />
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Chức danh (VI)" name="role_vi" rules={[{ required: true, message: "Vui lòng nhập chức danh VI!" }]}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Chức danh (Tiếng Việt)" name="role_vi" rules={[{ required: true, message: "Vui lòng nhập chức danh tiếng Việt." }]}>
               <Input placeholder="Thợ Cả & Nhà Sáng Lập" />
             </Form.Item>
-            <Form.Item label="Chức danh (EN)" name="role_en" rules={[{ required: true, message: "Vui lòng nhập chức danh EN!" }]}>
+            <Form.Item label="Chức danh (English)" name="role_en" rules={[{ required: true, message: "Vui lòng nhập chức danh tiếng Anh." }]}>
               <Input placeholder="Master Barber & Founder" />
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <Form.Item label="Số năm kinh nghiệm" name="years_of_experience">
               <InputNumber className="w-full" min={0} />
             </Form.Item>
-            <Form.Item label="Thứ tự hiển thị" name="position" rules={[{ required: true, message: "Vui lòng nhập thứ tự!" }]}>
+            <Form.Item
+              label="Thứ tự hiển thị"
+              name="position"
+              rules={[{ required: true, message: "Vui lòng nhập thứ tự." }]}
+              extra="Số nhỏ hơn hiển thị trước."
+            >
               <InputNumber className="w-full" min={0} />
             </Form.Item>
           </div>
 
-          <div className="mb-4">
-            <ImageUploader label="Ảnh Đại diện" value={avatarUrl} onChange={setAvatarUrl} uploadType="barber" />
+          <div className="mb-6">
+            <ImageUploader label="Ảnh đại diện" value={avatarUrl} onChange={setAvatarUrl} uploadType="barber" />
           </div>
 
-          <Form.Item label={<span><InstagramOutlined /> Đường dẫn Instagram</span>} name="instagram_url">
-            <Input placeholder="https://instagram.com/..." />
-          </Form.Item>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-3">
+            <Form.Item label="Instagram" name="instagram_url">
+              <Input prefix={<InstagramOutlined className="text-slate-400" />} placeholder="https://instagram.com/..." />
+            </Form.Item>
+            <Form.Item label="Twitter/X" name="twitter_url">
+              <Input prefix={<TwitterOutlined className="text-slate-400" />} placeholder="https://twitter.com/..." />
+            </Form.Item>
+            <Form.Item label="Facebook" name="facebook_url">
+              <Input prefix={<FacebookOutlined className="text-slate-400" />} placeholder="https://facebook.com/..." />
+            </Form.Item>
+          </div>
 
-          <Form.Item label={<span><TwitterOutlined /> Đường dẫn Twitter/X</span>} name="twitter_url">
-            <Input placeholder="https://twitter.com/..." />
-          </Form.Item>
-
-          <Form.Item label={<span><FacebookOutlined /> Đường dẫn Facebook</span>} name="facebook_url">
-            <Input placeholder="https://facebook.com/..." />
-          </Form.Item>
-
-          <Form.Item label="Hiển thị trên Website" name="is_active" valuePropName="checked">
+          <Form.Item label="Hiển thị trên website" name="is_active" valuePropName="checked">
             <Switch checkedChildren="Hiện" unCheckedChildren="Ẩn" />
           </Form.Item>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
-            <Button onClick={() => setIsModalOpen(false)}>Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" className="bg-amber-500 font-extrabold border-none">
-              Lưu Hồ Sơ Thợ
+          <div className="flex justify-end gap-2 border-0 border-t border-solid border-slate-200 pt-4 dark:border-slate-700">
+            <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={saving}>
+              {editingBarber ? "Lưu thay đổi" : "Thêm thợ"}
             </Button>
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }
