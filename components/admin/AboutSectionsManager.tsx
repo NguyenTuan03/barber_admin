@@ -1,8 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, InputNumber, Switch, Select, Tag, Popconfirm, Space, Card, App as AntdApp } from "antd";
-import { ProfileOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CodeOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Switch,
+  Select,
+  Tag,
+  Popconfirm,
+  Space,
+  Card,
+  Tooltip,
+  Alert,
+  App as AntdApp,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { BackendAboutSection } from "@/types/backendResource";
 import {
   getAdminAboutSections,
@@ -11,25 +27,28 @@ import {
   deleteAdminAboutSection,
 } from "@/services/adminApi";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import Image from "next/image";
+import { ListToolbar, matchesSearch } from "@/components/admin/ListToolbar";
+import { Thumbnail, BilingualCell, VisibilityTag } from "@/components/admin/cells";
 
 const { TextArea } = Input;
 
-const SECTION_TYPE_META: Record<BackendAboutSection["section_type"], { label: string; color: string }> = {
-  hero: { label: "Hero (Đầu trang)", color: "gold" },
-  story: { label: "Câu chuyện", color: "blue" },
-  stats: { label: "Số liệu Thống kê", color: "purple" },
-  value: { label: "Giá trị Cốt lõi", color: "green" },
-  team_intro: { label: "Giới thiệu Đội ngũ", color: "volcano" },
+const SECTION_TYPE_META: Record<BackendAboutSection["section_type"], { label: string }> = {
+  hero: { label: "Hero (đầu trang)" },
+  story: { label: "Câu chuyện" },
+  stats: { label: "Số liệu thống kê" },
+  value: { label: "Giá trị cốt lõi" },
+  team_intro: { label: "Giới thiệu đội ngũ" },
 };
 
 export function AboutSectionsManager() {
   const { message } = AntdApp.useApp();
   const [sections, setSections] = useState<BackendAboutSection[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingSection, setEditingSection] = useState<BackendAboutSection | null>(null);
   const [sectionType, setSectionType] = useState<BackendAboutSection["section_type"]>("story");
+  const [saving, setSaving] = useState<boolean>(false);
 
   const [form] = Form.useForm();
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -105,6 +124,7 @@ export function AboutSectionsManager() {
   }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendAboutSection>) => {
+    setSaving(true);
     try {
       const payload: Partial<BackendAboutSection> = {
         ...values,
@@ -114,10 +134,10 @@ export function AboutSectionsManager() {
 
       if (editingSection?.id) {
         await updateAdminAboutSection(editingSection.id, payload);
-        message.success("Cập nhật phần giới thiệu thành công!");
+        message.success("Đã cập nhật phần nội dung.");
       } else {
         await createAdminAboutSection(payload);
-        message.success("Thêm phần giới thiệu mới thành công!");
+        message.success("Đã thêm phần nội dung mới.");
       }
 
       setIsModalOpen(false);
@@ -125,13 +145,15 @@ export function AboutSectionsManager() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Thao tác thất bại";
       message.error(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number | string) => {
     try {
       await deleteAdminAboutSection(id);
-      message.success("Đã xóa phần giới thiệu!");
+      message.success("Đã xóa phần nội dung.");
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa thất bại";
@@ -139,42 +161,52 @@ export function AboutSectionsManager() {
     }
   };
 
+  const filtered = useMemo(
+    () =>
+      sections.filter((s) =>
+        matchesSearch(
+          search,
+          s.title_vi,
+          s.title_en,
+          SECTION_TYPE_META[s.section_type]?.label,
+          s.subtitle_vi
+        )
+      ),
+    [sections, search]
+  );
+
+  const isStats = sectionType === "stats";
+
   const columns = [
     {
-      title: "Hình ảnh",
+      title: "Ảnh",
       dataIndex: "image_url",
       key: "image_url",
-      width: 90,
-      render: (url: string, record: BackendAboutSection) =>
-        url ? (
-          <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
-            <Image src={url} alt={record.title_vi || "Hình ảnh section"} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-          </div>
-        ) : (
-          <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-            No Pic
-          </div>
-        ),
-    },
-    {
-      title: "Loại Section",
-      dataIndex: "section_type",
-      key: "section_type",
-      width: 150,
-      render: (type: BackendAboutSection["section_type"]) => (
-        <Tag color={SECTION_TYPE_META[type]?.color || "default"} className="font-bold text-[10px]">
-          {SECTION_TYPE_META[type]?.label || type}
-        </Tag>
+      width: 80,
+      render: (url: string, record: BackendAboutSection) => (
+        <Thumbnail url={url} alt={record.title_vi || "Hình ảnh phần nội dung"} />
       ),
     },
     {
-      title: "Tiêu đề (VI / EN)",
+      title: "Loại",
+      dataIndex: "section_type",
+      key: "section_type",
+      width: 160,
+      filters: Object.entries(SECTION_TYPE_META).map(([value, meta]) => ({
+        text: meta.label,
+        value,
+      })),
+      onFilter: (value: boolean | React.Key, record: BackendAboutSection) =>
+        record.section_type === value,
+      render: (type: BackendAboutSection["section_type"]) => (
+        <Tag variant="filled">{SECTION_TYPE_META[type]?.label || type}</Tag>
+      ),
+    },
+    {
+      title: "Tiêu đề",
       key: "title",
       render: (_: unknown, record: BackendAboutSection) => (
-        <div className="flex flex-col">
-          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.title_vi}</span>
-          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.title_en}</span>
-        </div>
+        <BilingualCell vi={record.title_vi} en={record.title_en} />
       ),
     },
     {
@@ -182,40 +214,51 @@ export function AboutSectionsManager() {
       dataIndex: "position",
       key: "position",
       width: 80,
-      render: (pos: number) => <span className="font-mono text-xs text-zinc-500">#{pos}</span>,
+      align: "center" as const,
+      sorter: (a: BackendAboutSection, b: BackendAboutSection) =>
+        (a.position || 0) - (b.position || 0),
+      render: (pos: number) => (
+        <span className="tabular-nums text-slate-500 dark:text-slate-400">{pos}</span>
+      ),
     },
     {
-      title: "Hiển thị",
+      title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
-      width: 100,
-      render: (active: boolean) =>
-        active ? (
-          <Tag color="success" className="font-bold text-[10px]">
-            Đang hiện
-          </Tag>
-        ) : (
-          <Tag color="default" className="font-bold text-[10px]">
-            Đã ẩn
-          </Tag>
-        ),
+      width: 110,
+      render: (active: boolean) => <VisibilityTag active={active} />,
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
+      width: 88,
       align: "right" as const,
       render: (_: unknown, record: BackendAboutSection) => (
-        <Space size="small">
-          <Button icon={<EditOutlined />} type="text" onClick={() => openModal(record)} className="text-amber-500" />
+        <Space size={0}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              type="text"
+              aria-label={`Chỉnh sửa ${record.title_vi || "phần nội dung"}`}
+              onClick={() => openModal(record)}
+            />
+          </Tooltip>
           <Popconfirm
-            title="Xóa phần giới thiệu"
-            description="Bạn có chắc chắn muốn xóa section này?"
+            title="Xóa phần nội dung"
+            description="Phần này sẽ bị gỡ khỏi trang Giới thiệu. Bạn chắc chắn chứ?"
             onConfirm={() => record.id && handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button icon={<DeleteOutlined />} type="text" danger />
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                type="text"
+                danger
+                aria-label={`Xóa ${record.title_vi || "phần nội dung"}`}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -223,54 +266,48 @@ export function AboutSectionsManager() {
   ];
 
   return (
-    <div className="space-y-6 select-none">
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <ProfileOutlined />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Quản lý Câu Chuyện & Số Liệu
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Quản lý câu chuyện thương hiệu và số liệu hiển thị ở đầu trang Giới thiệu.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openModal()}
-            className="font-extrabold text-xs rounded-xl px-5 bg-gradient-to-r from-amber-500 to-amber-600 border-none shadow-md shadow-amber-500/20"
-          >
-            Thêm Section mới
+    <>
+      <Card styles={{ body: { padding: 0 } }}>
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm theo tiêu đề hoặc loại..."
+          shown={filtered.length}
+          total={sections.length}
+        >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            Thêm phần nội dung
           </Button>
-        </div>
-      </Card>
+        </ListToolbar>
 
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden">
         <Table
           columns={columns}
-          dataSource={sections.map((s) => ({ ...s, key: s.id }))}
+          dataSource={filtered.map((s) => ({ ...s, key: s.id }))}
           loading={loading}
-          pagination={{ pageSize: 8 }}
-          className="text-xs"
+          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
+          // Numeric x switches antd to a fixed table layout, so the flexible
+          // columns share the leftover width and long text truncates instead of
+          // pushing the action column off screen.
+          scroll={{ x: 800 }}
+          locale={{
+            emptyText: search
+              ? "Không tìm thấy phần nội dung nào khớp với từ khóa."
+              : "Chưa có phần nội dung nào. Bấm “Thêm phần nội dung” để tạo mục đầu tiên.",
+          }}
         />
       </Card>
 
       <Modal
-        title={editingSection ? "Chỉnh sửa Section" : "Thêm Section Mới"}
+        title={editingSection ? "Chỉnh sửa phần nội dung" : "Thêm phần nội dung"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
+        width={640}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Loại Section" name="section_type" rules={[{ required: true }]}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="pt-2">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Loại nội dung" name="section_type" rules={[{ required: true }]}>
               <Select
                 onChange={(val) => setSectionType(val)}
                 options={Object.entries(SECTION_TYPE_META).map(([value, meta]) => ({
@@ -279,63 +316,68 @@ export function AboutSectionsManager() {
                 }))}
               />
             </Form.Item>
-            <Form.Item label="Thứ tự hiển thị" name="position" rules={[{ required: true, message: "Vui lòng nhập thứ tự!" }]}>
+            <Form.Item
+              label="Thứ tự hiển thị"
+              name="position"
+              rules={[{ required: true, message: "Vui lòng nhập thứ tự." }]}
+              extra="Số nhỏ hơn hiển thị trước."
+            >
               <InputNumber className="w-full" min={0} />
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Tiêu đề (VI)" name="title_vi" rules={[{ required: true, message: "Vui lòng nhập tiêu đề VI!" }]}>
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Tiêu đề (Tiếng Việt)" name="title_vi" rules={[{ required: true, message: "Vui lòng nhập tiêu đề tiếng Việt." }]}>
               <Input placeholder="Câu chuyện & Sứ mệnh" />
             </Form.Item>
-            <Form.Item label="Tiêu đề (EN)" name="title_en" rules={[{ required: true, message: "Vui lòng nhập tiêu đề EN!" }]}>
+            <Form.Item label="Tiêu đề (English)" name="title_en" rules={[{ required: true, message: "Vui lòng nhập tiêu đề tiếng Anh." }]}>
               <Input placeholder="Our Story & Mission" />
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Phụ đề (VI)" name="subtitle_vi">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Phụ đề (Tiếng Việt)" name="subtitle_vi">
               <Input placeholder="Hơn 10 năm xây dựng thương hiệu" />
             </Form.Item>
-            <Form.Item label="Phụ đề (EN)" name="subtitle_en">
+            <Form.Item label="Phụ đề (English)" name="subtitle_en">
               <Input placeholder="Over 10 years of brand building" />
             </Form.Item>
           </div>
 
-          {sectionType === "stats" && (
-            <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-500 font-mono font-bold mb-1.5">
-              <CodeOutlined /> Loại &quot;Số liệu Thống kê&quot; cần nội dung là chuỗi JSON hợp lệ
-            </div>
+          {isStats && (
+            <Alert
+              type="info"
+              showIcon
+              className="mb-4"
+              message="Loại “Số liệu thống kê” cần nội dung ở dạng JSON"
+              description={`Ví dụ: [ { "type": "stats", "title": "100%", "content": "Sản phẩm chính hãng" } ]`}
+            />
           )}
 
-          <Form.Item
-            label="Nội dung (VI)"
-            name="content_vi"
-            extra={sectionType === "stats" ? `[ { "type": "stats", "title": "100%", "content": "Sản phẩm chính hãng" } ]` : undefined}
-          >
-            <TextArea rows={sectionType === "stats" ? 5 : 3} className={sectionType === "stats" ? "font-mono" : ""} />
+          <Form.Item label="Nội dung (Tiếng Việt)" name="content_vi">
+            <TextArea rows={isStats ? 5 : 3} className={isStats ? "font-mono" : ""} />
           </Form.Item>
 
-          <Form.Item label="Nội dung (EN)" name="content_en">
-            <TextArea rows={sectionType === "stats" ? 5 : 3} className={sectionType === "stats" ? "font-mono" : ""} />
+          <Form.Item label="Nội dung (English)" name="content_en">
+            <TextArea rows={isStats ? 5 : 3} className={isStats ? "font-mono" : ""} />
           </Form.Item>
 
-          <div className="mb-4">
-            <ImageUploader label="Hình ảnh Section" value={imageUrl} onChange={setImageUrl} />
+          <div className="mb-6">
+            <ImageUploader label="Hình ảnh" value={imageUrl} onChange={setImageUrl} />
           </div>
 
-          <Form.Item label="Hiển thị trên Website" name="is_active" valuePropName="checked">
+          <Form.Item label="Hiển thị trên website" name="is_active" valuePropName="checked">
             <Switch checkedChildren="Hiện" unCheckedChildren="Ẩn" />
           </Form.Item>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
-            <Button onClick={() => setIsModalOpen(false)}>Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" className="bg-amber-500 font-extrabold border-none">
-              Lưu Section
+          <div className="flex justify-end gap-2 border-0 border-t border-solid border-slate-200 pt-4 dark:border-slate-700">
+            <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={saving}>
+              {editingSection ? "Lưu thay đổi" : "Thêm phần nội dung"}
             </Button>
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

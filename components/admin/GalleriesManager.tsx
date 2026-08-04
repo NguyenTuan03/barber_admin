@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, Popconfirm, Space, Card, App as AntdApp } from "antd";
-import { PictureOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useMemo } from "react";
+import { Table, Button, Modal, Form, Input, Popconfirm, Space, Card, Tooltip, App as AntdApp } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { BackendGallery } from "@/types/backendResource";
 import { getAdminGalleries, createAdminGallery, updateAdminGallery, deleteAdminGallery } from "@/services/adminApi";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import Image from "next/image";
+import { ListToolbar, matchesSearch } from "@/components/admin/ListToolbar";
+import { Thumbnail, BilingualCell, DescriptionCell } from "@/components/admin/cells";
 
 const { TextArea } = Input;
 
@@ -14,8 +15,10 @@ export function GalleriesManager() {
   const { message } = AntdApp.useApp();
   const [galleries, setGalleries] = useState<BackendGallery[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingGallery, setEditingGallery] = useState<BackendGallery | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
   const [form] = Form.useForm();
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -79,6 +82,7 @@ export function GalleriesManager() {
   }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendGallery>) => {
+    setSaving(true);
     try {
       const payload: Partial<BackendGallery> = {
         ...values,
@@ -87,10 +91,10 @@ export function GalleriesManager() {
 
       if (editingGallery?.id) {
         await updateAdminGallery(editingGallery.id, payload);
-        message.success("Cập nhật mẫu tóc thành công!");
+        message.success("Đã cập nhật mẫu tóc.");
       } else {
         await createAdminGallery(payload);
-        message.success("Thêm mẫu tóc mới thành công!");
+        message.success("Đã thêm mẫu tóc mới.");
       }
 
       setIsModalOpen(false);
@@ -98,13 +102,15 @@ export function GalleriesManager() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Thao tác thất bại";
       message.error(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number | string) => {
     try {
       await deleteAdminGallery(id);
-      message.success("Đã xóa ảnh mẫu tóc!");
+      message.success("Đã xóa mẫu tóc.");
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa thất bại";
@@ -112,59 +118,69 @@ export function GalleriesManager() {
     }
   };
 
+  const filtered = useMemo(
+    () =>
+      galleries.filter((g) =>
+        matchesSearch(search, g.title_vi, g.title_en, g.description_vi, g.description_en)
+      ),
+    [galleries, search]
+  );
+
   const columns = [
     {
-      title: "Hình ảnh Mẫu tóc",
+      title: "Hình ảnh",
       dataIndex: "image_url",
       key: "image_url",
-      width: 120,
-      render: (url: string, record: BackendGallery) =>
-        url ? (
-          <div className="relative w-20 h-14 rounded-xl overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
-            <Image src={url} alt={record.title_vi || "Hình ảnh mẫu tóc"} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-          </div>
-        ) : (
-          <div className="w-20 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-            No Pic
-          </div>
-        ),
+      width: 100,
+      render: (url: string, record: BackendGallery) => (
+        <Thumbnail url={url} alt={record.title_vi || "Hình ảnh mẫu tóc"} width={80} />
+      ),
     },
     {
-      title: "Tiêu đề Mẫu tóc (VI / EN)",
+      title: "Tiêu đề",
       key: "title",
       render: (_: unknown, record: BackendGallery) => (
-        <div className="flex flex-col">
-          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.title_vi}</span>
-          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.title_en}</span>
-        </div>
+        <BilingualCell vi={record.title_vi} en={record.title_en} />
       ),
     },
     {
-      title: "Mô tả Mẫu tóc",
+      title: "Mô tả",
       key: "description",
       render: (_: unknown, record: BackendGallery) => (
-        <div className="flex flex-col max-w-xs text-xs text-zinc-500 space-y-0.5">
-          <span className="line-clamp-1">{record.description_vi}</span>
-          <span className="line-clamp-1 italic text-[11px] text-zinc-400">{record.description_en}</span>
-        </div>
+        <DescriptionCell vi={record.description_vi} en={record.description_en} />
       ),
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
+      width: 88,
       align: "right" as const,
       render: (_: unknown, record: BackendGallery) => (
-        <Space size="small">
-          <Button icon={<EditOutlined />} type="text" onClick={() => openModal(record)} className="text-amber-500" />
+        <Space size={0}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              type="text"
+              aria-label={`Chỉnh sửa ${record.title_vi || "mẫu tóc"}`}
+              onClick={() => openModal(record)}
+            />
+          </Tooltip>
           <Popconfirm
             title="Xóa mẫu tóc"
-            description="Bạn có chắc chắn muốn xóa mẫu tóc này?"
+            description="Ảnh mẫu tóc sẽ bị gỡ khỏi trang chủ. Bạn chắc chắn chứ?"
             onConfirm={() => record.id && handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button icon={<DeleteOutlined />} type="text" danger />
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                type="text"
+                danger
+                aria-label={`Xóa ${record.title_vi || "mẫu tóc"}`}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -172,81 +188,76 @@ export function GalleriesManager() {
   ];
 
   return (
-    <div className="space-y-6 select-none">
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <PictureOutlined />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Quản lý Bộ Sưu Tập Mẫu Tóc Hot Trend
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Quản lý các mẫu tóc nổi bật hiển thị ở trang chủ.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openModal()}
-            className="font-extrabold text-xs rounded-xl px-5 bg-gradient-to-r from-amber-500 to-amber-600 border-none shadow-md shadow-amber-500/20"
-          >
-            Thêm Mẫu tóc mới
+    <>
+      <Card styles={{ body: { padding: 0 } }}>
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm mẫu tóc theo tiêu đề..."
+          shown={filtered.length}
+          total={galleries.length}
+        >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            Thêm mẫu tóc
           </Button>
-        </div>
-      </Card>
+        </ListToolbar>
 
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden">
         <Table
           columns={columns}
-          dataSource={galleries.map((g) => ({ ...g, key: g.id }))}
+          dataSource={filtered.map((g) => ({ ...g, key: g.id }))}
           loading={loading}
-          pagination={{ pageSize: 8 }}
-          className="text-xs"
+          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
+          // Numeric x switches antd to a fixed table layout, so the flexible
+          // columns share the leftover width and long text truncates instead of
+          // pushing the action column off screen.
+          scroll={{ x: 680 }}
+          locale={{
+            emptyText: search
+              ? "Không tìm thấy mẫu tóc nào khớp với từ khóa."
+              : "Chưa có mẫu tóc nào. Bấm “Thêm mẫu tóc” để tạo mục đầu tiên.",
+          }}
         />
       </Card>
 
       <Modal
-        title={editingGallery ? "Chỉnh sửa Mẫu Tóc" : "Thêm Mẫu Tóc Mới"}
+        title={editingGallery ? "Chỉnh sửa mẫu tóc" : "Thêm mẫu tóc"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
+        width={640}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Tiêu đề Mẫu tóc (VI)" name="title_vi" rules={[{ required: true, message: "Vui lòng nhập tiêu đề VI!" }]}>
-              <Input placeholder="Modern Undercut" />
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="pt-2">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Tiêu đề (Tiếng Việt)" name="title_vi" rules={[{ required: true, message: "Vui lòng nhập tiêu đề tiếng Việt." }]}>
+              <Input placeholder="Undercut Hiện Đại" />
             </Form.Item>
-            <Form.Item label="Tiêu đề Mẫu tóc (EN)" name="title_en" rules={[{ required: true, message: "Vui lòng nhập tiêu đề EN!" }]}>
+            <Form.Item label="Tiêu đề (English)" name="title_en" rules={[{ required: true, message: "Vui lòng nhập tiêu đề tiếng Anh." }]}>
               <Input placeholder="Modern Undercut" />
             </Form.Item>
           </div>
 
-          <Form.Item label="Mô tả Mẫu tóc (VI)" name="description_vi">
-            <TextArea rows={2} />
-          </Form.Item>
-
-          <Form.Item label="Mô tả Mẫu tóc (EN)" name="description_en">
-            <TextArea rows={2} />
-          </Form.Item>
-
-          <div className="mb-4">
-            <ImageUploader label="Hình ảnh Mẫu tóc" value={imageUrl} onChange={setImageUrl} uploadType="gallery" />
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Mô tả (Tiếng Việt)" name="description_vi">
+              <TextArea rows={3} />
+            </Form.Item>
+            <Form.Item label="Mô tả (English)" name="description_en">
+              <TextArea rows={3} />
+            </Form.Item>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
-            <Button onClick={() => setIsModalOpen(false)}>Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" className="bg-amber-500 font-extrabold border-none">
-              Lưu Mẫu Tóc
+          <div className="mb-6">
+            <ImageUploader label="Hình ảnh mẫu tóc" value={imageUrl} onChange={setImageUrl} uploadType="gallery" />
+          </div>
+
+          <div className="flex justify-end gap-2 border-0 border-t border-solid border-slate-200 pt-4 dark:border-slate-700">
+            <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={saving}>
+              {editingGallery ? "Lưu thay đổi" : "Thêm mẫu tóc"}
             </Button>
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

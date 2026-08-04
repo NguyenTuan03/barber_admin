@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Input, Button } from "antd";
-import { PlusOutlined, DeleteOutlined, TrophyOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
 export interface AboutServiceStatItem {
   type: string;
@@ -50,53 +50,59 @@ export function AboutServiceStatsEditor({ value, onChange }: AboutServiceStatsEd
   return (
     <div className="space-y-3">
       {items.length === 0 && (
-        <div className="text-[11px] text-zinc-400 italic">
-          Chưa có số liệu nào, bấm &quot;Thêm số liệu&quot; bên dưới.
+        <div className="text-[13px] text-slate-500 dark:text-slate-400">
+          Chưa có số liệu nào — bấm &quot;Thêm số liệu&quot; bên dưới.
         </div>
       )}
 
       {items.map((item, idx) => (
         <div
           key={idx}
-          className="rounded-xl border border-solid border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 flex flex-col sm:flex-row gap-3"
+          className="flex items-end gap-3 rounded-md border border-solid border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40"
         >
-          <div className="flex-1 space-y-2">
+          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <div>
-              <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
-                Con số (VD: 300.000+)
-              </div>
+              <label
+                htmlFor={`stat-${idx}-title`}
+                className="mb-1 block text-[13px] text-slate-600 dark:text-slate-400"
+              >
+                Con số
+              </label>
               <Input
-                size="small"
+                id={`stat-${idx}-title`}
                 value={item.title}
                 onChange={(e) => updateItem(idx, { title: e.target.value })}
                 placeholder="VD: 300.000+"
-                className="text-xs rounded-lg font-bold"
               />
             </div>
             <div>
-              <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
-                Mô tả ngắn (VD: Sản phẩm chính hãng)
-              </div>
+              <label
+                htmlFor={`stat-${idx}-content`}
+                className="mb-1 block text-[13px] text-slate-600 dark:text-slate-400"
+              >
+                Mô tả ngắn
+              </label>
               <Input
-                size="small"
+                id={`stat-${idx}-content`}
                 value={item.content}
                 onChange={(e) => updateItem(idx, { content: e.target.value })}
                 placeholder="VD: Sản phẩm chính hãng"
-                className="text-xs rounded-lg"
               />
             </div>
           </div>
 
-          <div className="flex sm:flex-col items-center justify-end gap-1">
-            <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeItem(idx)} />
-          </div>
+          <Button
+            danger
+            type="text"
+            icon={<DeleteOutlined />}
+            aria-label={`Xóa số liệu ${idx + 1}`}
+            onClick={() => removeItem(idx)}
+          />
         </div>
       ))}
 
-      <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addItem} className="w-full text-xs">
-        <span className="inline-flex items-center gap-1">
-          <TrophyOutlined /> Thêm số liệu
-        </span>
+      <Button type="dashed" icon={<PlusOutlined />} onClick={addItem} className="w-full">
+        Thêm số liệu
       </Button>
     </div>
   );

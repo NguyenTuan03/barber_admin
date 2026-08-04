@@ -47,25 +47,30 @@ export function ContactInfoEditor({ value, onChange }: ContactInfoEditorProps) {
   return (
     <div className="space-y-2">
       {items.length === 0 && (
-        <div className="text-[11px] text-zinc-400 italic">
-          Chưa có thông tin liên hệ nào, bấm &quot;Thêm dòng&quot; bên dưới.
+        <div className="text-[13px] text-slate-500 dark:text-slate-400">
+          Chưa có thông tin liên hệ nào — bấm &quot;Thêm dòng&quot; bên dưới.
         </div>
       )}
 
       {items.map((item, idx) => (
         <div key={idx} className="flex items-center gap-1.5">
           <Input
-            size="small"
             value={item.title}
             onChange={(e) => updateItem(idx, e.target.value)}
             placeholder="VD: hello@gmail.com hoặc 0909.999.999"
-            className="text-xs rounded-lg"
+            aria-label={`Thông tin liên hệ ${idx + 1}`}
           />
-          <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => removeItem(idx)} />
+          <Button
+            danger
+            type="text"
+            icon={<DeleteOutlined />}
+            aria-label={`Xóa thông tin liên hệ ${idx + 1}`}
+            onClick={() => removeItem(idx)}
+          />
         </div>
       ))}
 
-      <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={addItem} className="w-full text-xs">
+      <Button type="dashed" icon={<PlusOutlined />} onClick={addItem} className="w-full">
         Thêm dòng
       </Button>
     </div>

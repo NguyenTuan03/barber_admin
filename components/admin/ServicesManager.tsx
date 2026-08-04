@@ -1,12 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, InputNumber, Tag, Popconfirm, Space, Card, App as AntdApp } from "antd";
-import { ScissorOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Popconfirm,
+  Space,
+  Card,
+  Tooltip,
+  App as AntdApp,
+} from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { BackendService } from "@/types/backendResource";
 import { getAdminServices, createAdminService, updateAdminService, deleteAdminService } from "@/services/adminApi";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import Image from "next/image";
+import { ListToolbar, matchesSearch } from "@/components/admin/ListToolbar";
+import { Thumbnail, BilingualCell, DescriptionCell, PriceCell } from "@/components/admin/cells";
 
 const { TextArea } = Input;
 
@@ -14,8 +27,10 @@ export function ServicesManager() {
   const { message } = AntdApp.useApp();
   const [services, setServices] = useState<BackendService[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [search, setSearch] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingService, setEditingService] = useState<BackendService | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
   const [form] = Form.useForm();
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -85,6 +100,7 @@ export function ServicesManager() {
   }, [isModalOpen]);
 
   const handleSubmit = async (values: Partial<BackendService>) => {
+    setSaving(true);
     try {
       const payload: Partial<BackendService> = {
         ...values,
@@ -95,10 +111,10 @@ export function ServicesManager() {
 
       if (editingService?.id) {
         await updateAdminService(editingService.id, payload);
-        message.success("Cập nhật gói dịch vụ thành công!");
+        message.success("Đã cập nhật dịch vụ.");
       } else {
         await createAdminService(payload);
-        message.success("Thêm gói dịch vụ mới thành công!");
+        message.success("Đã thêm dịch vụ mới.");
       }
 
       setIsModalOpen(false);
@@ -106,13 +122,15 @@ export function ServicesManager() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Thao tác thất bại";
       message.error(msg);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id: number | string) => {
     try {
       await deleteAdminService(id);
-      message.success("Đã xóa gói dịch vụ!");
+      message.success("Đã xóa dịch vụ.");
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Xóa thất bại";
@@ -120,79 +138,90 @@ export function ServicesManager() {
     }
   };
 
+  const filtered = useMemo(
+    () =>
+      services.filter((s) =>
+        matchesSearch(search, s.name_vi, s.name_en, s.description_vi, s.description_en)
+      ),
+    [services, search]
+  );
+
   const columns = [
     {
-      title: "Ảnh Dịch vụ",
+      title: "Ảnh",
       dataIndex: "image_url",
       key: "image_url",
-      width: 100,
-      render: (url: string, record: BackendService) =>
-        url ? (
-          <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-solid border-zinc-200 dark:border-zinc-800 bg-zinc-900 group">
-            <Image src={url} alt={record.name_vi || "Hình ảnh dịch vụ"} fill className="object-cover transition-transform duration-500 group-hover:scale-110" />
-          </div>
-        ) : (
-          <div className="w-14 h-14 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-            No Pic
-          </div>
-        ),
+      width: 80,
+      render: (url: string, record: BackendService) => (
+        <Thumbnail url={url} alt={record.name_vi || "Hình ảnh dịch vụ"} />
+      ),
     },
     {
-      title: "Tên Dịch vụ (VI / EN)",
+      title: "Tên dịch vụ",
       key: "name",
       render: (_: unknown, record: BackendService) => (
-        <div className="flex flex-col">
-          <span className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{record.name_vi}</span>
-          <span className="text-[11px] text-amber-600 dark:text-amber-500 font-medium">{record.name_en}</span>
-        </div>
+        <BilingualCell vi={record.name_vi} en={record.name_en} />
       ),
     },
     {
       title: "Mô tả",
       key: "description",
       render: (_: unknown, record: BackendService) => (
-        <div className="flex flex-col max-w-xs text-xs text-zinc-500 space-y-0.5">
-          <span className="line-clamp-1">{record.description_vi}</span>
-          <span className="line-clamp-1 italic text-[11px] text-zinc-400">{record.description_en}</span>
-        </div>
+        <DescriptionCell vi={record.description_vi} en={record.description_en} />
       ),
     },
     {
-      title: "Giá Niêm Yết",
+      title: "Giá",
       dataIndex: "price",
       key: "price",
-      render: (price: number) => (
-        <span className="font-extrabold font-mono text-emerald-600 dark:text-emerald-400 text-xs">
-          {price?.toLocaleString("vi-VN")} VNĐ
-        </span>
-      ),
+      width: 130,
+      align: "right" as const,
+      sorter: (a: BackendService, b: BackendService) => (a.price || 0) - (b.price || 0),
+      render: (price: number) => <PriceCell value={price} />,
     },
     {
       title: "Thời lượng",
       dataIndex: "duration_minutes",
       key: "duration_minutes",
+      width: 110,
+      align: "right" as const,
+      sorter: (a: BackendService, b: BackendService) =>
+        (a.duration_minutes || 0) - (b.duration_minutes || 0),
       render: (duration: number) => (
-        <Tag icon={<ClockCircleOutlined />} color="warning" className="font-mono text-xs border-amber-500/30">
-          {duration} phút
-        </Tag>
+        <span className="tabular-nums text-slate-600 dark:text-slate-400">{duration} phút</span>
       ),
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
+      width: 88,
       align: "right" as const,
       render: (_: unknown, record: BackendService) => (
-        <Space size="small">
-          <Button icon={<EditOutlined />} type="text" onClick={() => openModal(record)} className="text-amber-500" />
+        <Space size={0}>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              icon={<EditOutlined />}
+              type="text"
+              aria-label={`Chỉnh sửa ${record.name_vi || "dịch vụ"}`}
+              onClick={() => openModal(record)}
+            />
+          </Tooltip>
           <Popconfirm
-            title="Xóa gói dịch vụ"
-            description="Bạn có chắc chắn muốn xóa dịch vụ này?"
+            title="Xóa dịch vụ"
+            description="Dịch vụ sẽ bị gỡ khỏi website. Bạn chắc chắn chứ?"
             onConfirm={() => record.id && handleDelete(record.id)}
             okText="Xóa"
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button icon={<DeleteOutlined />} type="text" danger />
+            <Tooltip title="Xóa">
+              <Button
+                icon={<DeleteOutlined />}
+                type="text"
+                danger
+                aria-label={`Xóa ${record.name_vi || "dịch vụ"}`}
+              />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -200,90 +229,91 @@ export function ServicesManager() {
   ];
 
   return (
-    <div className="space-y-6 select-none">
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
-              <ScissorOutlined />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 m-0">
-                Quản lý Gói Dịch Vụ Cắt Tóc
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 m-0">
-                Thêm, chỉnh sửa hoặc xoá các dịch vụ hiển thị trên trang Dịch vụ.
-              </p>
-            </div>
-          </div>
-
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openModal()}
-            className="font-extrabold text-xs rounded-xl px-5 bg-gradient-to-r from-amber-500 to-amber-600 border-none shadow-md shadow-amber-500/20"
-          >
-            Thêm Dịch vụ mới
+    <>
+      <Card styles={{ body: { padding: 0 } }}>
+        <ListToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm dịch vụ theo tên..."
+          shown={filtered.length}
+          total={services.length}
+        >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+            Thêm dịch vụ
           </Button>
-        </div>
-      </Card>
+        </ListToolbar>
 
-      <Card className="shadow-xs rounded-2xl border-solid border-zinc-200 dark:border-zinc-800 p-0 overflow-hidden">
         <Table
           columns={columns}
-          dataSource={services.map((s) => ({ ...s, key: s.id }))}
+          dataSource={filtered.map((s) => ({ ...s, key: s.id }))}
           loading={loading}
-          pagination={{ pageSize: 8 }}
-          className="text-xs"
+          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
+          // Numeric x switches antd to a fixed table layout, so the flexible
+          // columns share the leftover width and long text truncates instead of
+          // pushing the action column off screen.
+          scroll={{ x: 800 }}
+          locale={{
+            emptyText: search
+              ? "Không tìm thấy dịch vụ nào khớp với từ khóa."
+              : "Chưa có dịch vụ nào. Bấm “Thêm dịch vụ” để tạo mục đầu tiên.",
+          }}
         />
       </Card>
 
       <Modal
-        title={editingService ? "Chỉnh sửa Gói Dịch Vụ" : "Thêm Gói Dịch Vụ Mới"}
+        title={editingService ? "Chỉnh sửa dịch vụ" : "Thêm dịch vụ"}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
+        width={640}
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} className="text-xs pt-2">
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Tên Dịch vụ (VI)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên VI!" }]}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} className="pt-2">
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Tên dịch vụ (Tiếng Việt)" name="name_vi" rules={[{ required: true, message: "Vui lòng nhập tên tiếng Việt." }]}>
               <Input placeholder="Cắt Tóc Classic" />
             </Form.Item>
-            <Form.Item label="Tên Dịch vụ (EN)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên EN!" }]}>
+            <Form.Item label="Tên dịch vụ (English)" name="name_en" rules={[{ required: true, message: "Vui lòng nhập tên tiếng Anh." }]}>
               <Input placeholder="Classic Haircut" />
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Form.Item label="Giá Niêm Yết (VNĐ)" name="price" rules={[{ required: true, message: "Vui lòng nhập giá!" }]}>
-              <InputNumber className="w-full" min={0} formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")} />
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Giá niêm yết (VNĐ)" name="price" rules={[{ required: true, message: "Vui lòng nhập giá." }]}>
+              <InputNumber<number>
+                className="w-full"
+                min={0}
+                step={10000}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                parser={(value) => Number((value || "").replace(/\./g, ""))}
+              />
             </Form.Item>
-            <Form.Item label="Thời lượng (Phút)" name="duration_minutes" rules={[{ required: true, message: "Vui lòng nhập thời lượng!" }]}>
-              <InputNumber className="w-full" min={5} />
+            <Form.Item label="Thời lượng (phút)" name="duration_minutes" rules={[{ required: true, message: "Vui lòng nhập thời lượng." }]}>
+              <InputNumber className="w-full" min={5} step={5} />
             </Form.Item>
           </div>
 
-          <Form.Item label="Mô tả Dịch vụ (VI)" name="description_vi">
-            <TextArea rows={2} />
-          </Form.Item>
-
-          <Form.Item label="Mô tả Dịch vụ (EN)" name="description_en">
-            <TextArea rows={2} />
-          </Form.Item>
-
-          <div className="mb-4">
-            <ImageUploader label="Hình ảnh Dịch vụ" value={imageUrl} onChange={setImageUrl} uploadType="service" />
+          <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+            <Form.Item label="Mô tả (Tiếng Việt)" name="description_vi">
+              <TextArea rows={3} />
+            </Form.Item>
+            <Form.Item label="Mô tả (English)" name="description_en">
+              <TextArea rows={3} />
+            </Form.Item>
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-solid border-zinc-200 dark:border-zinc-800">
-            <Button onClick={() => setIsModalOpen(false)}>Hủy bỏ</Button>
-            <Button type="primary" htmlType="submit" className="bg-amber-500 font-extrabold border-none">
-              Lưu Dịch Vụ
+          <div className="mb-6">
+            <ImageUploader label="Hình ảnh dịch vụ" value={imageUrl} onChange={setImageUrl} uploadType="service" />
+          </div>
+
+          <div className="flex justify-end gap-2 border-0 border-t border-solid border-slate-200 pt-4 dark:border-slate-700">
+            <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={saving}>
+              {editingService ? "Lưu thay đổi" : "Thêm dịch vụ"}
             </Button>
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

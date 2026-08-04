@@ -72,36 +72,41 @@ export function ReviewFeatsEditor({ value, onChange }: ReviewFeatsEditorProps) {
         return (
           <div
             key={meta.type}
-            className="rounded-xl border border-solid border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 space-y-3"
+            className="space-y-3 rounded-md border border-solid border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40"
           >
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 text-xs font-extrabold uppercase tracking-wide">
-              {meta.icon}
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+              <span className="text-slate-500 dark:text-slate-400">{meta.icon}</span>
               <span>{meta.label}</span>
             </div>
 
             <div>
-              <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
+              <label
+                htmlFor={`${meta.type}-title`}
+                className="mb-1 block text-[13px] text-slate-600 dark:text-slate-400"
+              >
                 Tiêu đề
-              </div>
+              </label>
               <Input
-                size="small"
+                id={`${meta.type}-title`}
                 value={item.title}
                 onChange={(e) => updateItem(idx, meta.type, { title: e.target.value })}
                 placeholder={meta.titlePlaceholder}
-                className="text-xs rounded-lg"
               />
             </div>
 
             <div>
-              <div className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-1">
+              <label
+                htmlFor={`${meta.type}-description`}
+                className="mb-1 block text-[13px] text-slate-600 dark:text-slate-400"
+              >
                 Mô tả ngắn
-              </div>
+              </label>
               <TextArea
+                id={`${meta.type}-description`}
                 rows={3}
                 value={item.description}
                 onChange={(e) => updateItem(idx, meta.type, { description: e.target.value })}
                 placeholder={meta.descPlaceholder}
-                className="text-xs rounded-lg"
               />
             </div>
           </div>
