@@ -2,23 +2,16 @@
 
 import { useState } from "react";
 import { Layout, Spin } from "antd";
-import { AdminTabEnum, AuthStatusEnum } from "@/enum/AppEnum";
+import { AuthStatusEnum } from "@/enum/AppEnum";
 import { useAuth } from "@/context/AuthContext";
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 import { AdminHeader } from "@/components/layout/AdminHeader";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { getNavItem } from "@/components/layout/adminNav";
 import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
-import { HomeManager } from "@/components/admin/HomeManager";
-import { ServicesManager } from "@/components/admin/ServicesManager";
-import { ProductsManager } from "@/components/admin/ProductsManager";
-import { AboutManager } from "@/components/admin/AboutManager";
 
 const { Content } = Layout;
 
-export default function AdminDashboardPage() {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { authStatus } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTabEnum>(AdminTabEnum.HOME);
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
   // 1. Loading state
@@ -38,39 +31,21 @@ export default function AdminDashboardPage() {
     return <AdminLoginForm />;
   }
 
-  // 3. Authenticated state -> Render Admin Dashboard
-  const currentSection = getNavItem(activeTab);
-
+  // 3. Authenticated state -> Render Admin Dashboard shell around the active route
   return (
     // Inline height: antd's own `.ant-layout { min-height: 0 }` is injected after
     // Tailwind's stylesheet, so a `min-h-screen` class here loses to it.
     <Layout style={{ minHeight: "100vh" }}>
-      <AdminSidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        collapsed={collapsed}
-        onCollapsedChange={setCollapsed}
-      />
+      <AdminSidebar collapsed={collapsed} onCollapsedChange={setCollapsed} />
 
       <Layout className="flex min-w-0 flex-1 flex-col">
         <AdminHeader
-          title={currentSection.label}
           collapsed={collapsed}
           onToggleCollapsed={() => setCollapsed((prev) => !prev)}
         />
 
         <Content className="overflow-y-auto p-4 lg:p-6">
-          <div className="mx-auto max-w-7xl space-y-5">
-            <PageHeader
-              title={currentSection.label}
-              description={currentSection.description}
-            />
-
-            {activeTab === AdminTabEnum.HOME && <HomeManager />}
-            {activeTab === AdminTabEnum.SERVICES && <ServicesManager />}
-            {activeTab === AdminTabEnum.PRODUCTS && <ProductsManager />}
-            {activeTab === AdminTabEnum.ABOUT && <AboutManager />}
-          </div>
+          <div className="mx-auto max-w-7xl space-y-5">{children}</div>
         </Content>
       </Layout>
     </Layout>

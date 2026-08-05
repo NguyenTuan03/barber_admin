@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
 import { Layout, Button, Dropdown, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -13,12 +14,11 @@ import {
 } from "@ant-design/icons";
 import { useAntdTheme } from "@/context/AntdThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { getNavItemByPath } from "@/components/layout/adminNav";
 
 const { Header } = Layout;
 
 interface AdminHeaderProps {
-  /** Name of the section currently open, so the user always knows where they are. */
-  title: string;
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }
@@ -32,7 +32,9 @@ const getInitials = (name: string) =>
     .join("")
     .toUpperCase();
 
-export function AdminHeader({ title, collapsed, onToggleCollapsed }: AdminHeaderProps) {
+export function AdminHeader({ collapsed, onToggleCollapsed }: AdminHeaderProps) {
+  const pathname = usePathname();
+  const title = getNavItemByPath(pathname).label;
   const { isDark, toggleTheme } = useAntdTheme();
   const { user, logout } = useAuth();
 

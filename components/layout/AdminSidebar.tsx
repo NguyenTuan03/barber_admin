@@ -1,25 +1,22 @@
 "use client";
 
 import React from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Layout, Menu } from "antd";
-import { AdminTabEnum } from "@/enum/AppEnum";
-import { ADMIN_NAV } from "@/components/layout/adminNav";
+import { ADMIN_NAV, getNavItemByPath } from "@/components/layout/adminNav";
 
 const { Sider } = Layout;
 
 interface AdminSidebarProps {
-  activeTab: AdminTabEnum;
-  onTabChange: (tab: AdminTabEnum) => void;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
 }
 
-export function AdminSidebar({
-  activeTab,
-  onTabChange,
-  collapsed,
-  onCollapsedChange,
-}: AdminSidebarProps) {
+export function AdminSidebar({ collapsed, onCollapsedChange }: AdminSidebarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const activePath = getNavItemByPath(pathname).path;
+
   return (
     <Sider
       theme="light"
@@ -50,10 +47,10 @@ export function AdminSidebar({
       <Menu
         theme="light"
         mode="inline"
-        selectedKeys={[activeTab]}
-        onClick={({ key }) => onTabChange(key as AdminTabEnum)}
+        selectedKeys={[activePath]}
+        onClick={({ key }) => router.push(key)}
         items={ADMIN_NAV.map((item) => ({
-          key: item.key,
+          key: item.path,
           icon: item.icon,
           label: item.label,
         }))}
