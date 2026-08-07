@@ -111,7 +111,7 @@ export function QuickBookingModal({
             <select
               value={barberId}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setBarberId(e.target.value)}
-              className="w-full h-10 rounded-lg border border-zinc-200 bg-white px-3 text-xs focus:ring-2 focus:ring-amber-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+              className="w-full h-10 rounded-lg border border-zinc-200/80 bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/70 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
             >
               <option value="barber-1">Huy Nguyễn (Master)</option>
               <option value="barber-2">Hoàng Nam (Senior)</option>
@@ -155,7 +155,7 @@ export function QuickBookingModal({
           <Button type="button" variant="outline" onClick={onClose}>
             Hủy bỏ
           </Button>
-          <Button type="submit" variant="default" className="bg-amber-600 hover:bg-amber-700 text-white">
+          <Button type="submit" variant="default">
             Xác nhận tạo lịch
           </Button>
         </div>

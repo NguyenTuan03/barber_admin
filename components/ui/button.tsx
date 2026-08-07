@@ -7,10 +7,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-amber-600 text-white hover:bg-amber-700 shadow-sm",
-        primary: "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm",
-        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-sm",
-        outline: "border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
+        default: "bg-amber-600 text-white hover:bg-amber-700 shadow-[var(--shadow-card)]",
+        primary: "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-[var(--shadow-card)]",
+        destructive: "bg-red-600 text-white hover:bg-red-700 shadow-[var(--shadow-card)]",
+        outline: "border border-zinc-200/80 bg-white hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700",
         ghost: "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         link: "text-amber-600 underline-offset-4 hover:underline dark:text-amber-500",

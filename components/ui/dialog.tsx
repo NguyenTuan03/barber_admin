@@ -29,7 +29,7 @@ export function Dialog({
       />
 
       {/* Dialog content */}
-      <div className="relative z-50 w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:rounded-2xl animate-in fade-in-0 zoom-in-95">
+      <div className="relative z-50 w-full max-w-lg rounded-2xl bg-white p-6 shadow-[var(--shadow-elevated)] dark:bg-zinc-900 animate-in fade-in-0 zoom-in-95">
         <div className="flex items-center justify-between border-b border-zinc-100 pb-4 dark:border-zinc-800">
           <div>
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">

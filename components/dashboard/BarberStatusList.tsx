@@ -25,7 +25,7 @@ export function BarberStatusList({ workloads }: BarberStatusListProps) {
   };
 
   return (
-    <Card className="border-zinc-200 dark:border-zinc-800">
+    <Card>
       <CardHeader className="pb-3 border-b border-zinc-100 dark:border-zinc-800">
         <CardTitle className="text-base font-semibold flex items-center justify-between">
           <span className="flex items-center gap-2">

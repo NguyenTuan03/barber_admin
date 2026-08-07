@@ -18,6 +18,11 @@
   --muted: #475569; /* slate-600  - secondary text */
   --border: #e2e8f0; /* slate-200 */
   --accent: #2563eb; /* blue-600 */
+
+  /* Single elevation system used everywhere instead of ad-hoc
+     shadow-sm + border stacking on every container. */
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 24px -14px rgba(15, 23, 42, 0.16);
+  --shadow-elevated: 0 4px 10px rgba(15, 23, 42, 0.06), 0 24px 48px -16px rgba(15, 23, 42, 0.28);
 }
 
 .dark {
@@ -27,6 +32,9 @@
   --muted: #94a3b8; /* slate-400 */
   --border: #334155; /* slate-700 */
   --accent: #3b82f6; /* blue-500 */
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 24px -14px rgba(0, 0, 0, 0.6);
+  --shadow-elevated: 0 4px 10px rgba(0, 0, 0, 0.35), 0 24px 48px -16px rgba(0, 0, 0, 0.7);
 }
 
 @theme inline {
@@ -37,12 +45,14 @@
   --color-border: var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --shadow-card: var(--shadow-card);
+  --shadow-elevated: var(--shadow-elevated);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Keep a visible focus ring for keyboard users on our own (non-antd) controls. */

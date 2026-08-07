@@ -23,32 +23,28 @@ export function StatCards({ stats }: StatCardsProps) {
       value: stats.totalAppointments.toString(),
       subtext: `${stats.confirmedCount} đã xác nhận, ${stats.inProgressCount} đang cắt`,
       icon: CalendarCheck,
-      color: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-50 dark:bg-blue-950/40",
+      accent: false,
     },
     {
       title: "Doanh thu dự kiến",
       value: formatCurrency(stats.estimatedRevenue),
       subtext: "Dựa trên các dịch vụ đã đặt",
       icon: DollarSign,
-      color: "text-amber-600 dark:text-amber-400",
-      bgColor: "bg-amber-50 dark:bg-amber-950/40",
+      accent: true,
     },
     {
       title: "Đã hoàn thành",
       value: `${stats.completedCount} lịch`,
       subtext: `Đạt ${Math.round((stats.completedCount / (stats.totalAppointments || 1)) * 100)}% công suất`,
       icon: CheckCircle2,
-      color: "text-emerald-600 dark:text-emerald-400",
-      bgColor: "bg-emerald-50 dark:bg-emerald-950/40",
+      accent: false,
     },
     {
       title: "Thợ đang trực",
       value: "4 thợ",
       subtext: "2 thợ bận, 2 thợ sẵn sàng",
       icon: Users,
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-50 dark:bg-purple-950/40",
+      accent: false,
     },
   ];
 
@@ -57,21 +53,33 @@ export function StatCards({ stats }: StatCardsProps) {
       {statItems.map((item, idx) => {
         const Icon = item.icon;
         return (
-          <Card key={idx} className="border-zinc-200 dark:border-zinc-800">
+          <Card key={idx}>
             <CardContent className="p-5 flex items-center justify-between">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
                   {item.title}
                 </p>
-                <p className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                <p className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
                   {item.value}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {item.subtext}
                 </p>
               </div>
-              <div className={`p-3 rounded-xl ${item.bgColor}`}>
-                <Icon className={`w-6 h-6 ${item.color}`} />
+              <div
+                className={
+                  item.accent
+                    ? "p-3 rounded-xl bg-amber-600 shadow-[var(--shadow-card)]"
+                    : "p-3 rounded-xl bg-zinc-900/5 dark:bg-white/5"
+                }
+              >
+                <Icon
+                  className={
+                    item.accent
+                      ? "w-6 h-6 text-white"
+                      : "w-6 h-6 text-zinc-600 dark:text-zinc-300"
+                  }
+                />
               </div>
             </CardContent>
           </Card>

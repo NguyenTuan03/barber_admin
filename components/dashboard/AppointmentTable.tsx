@@ -72,7 +72,7 @@ export function AppointmentTable({
   return (
     <div className="space-y-4">
       {/* Table Toolbar & Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-zinc-950 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-zinc-950/60 p-4 rounded-xl shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
           <Filter className="w-4 h-4 text-amber-600" />
           <span>Bộ lọc lịch hẹn:</span>
@@ -83,7 +83,7 @@ export function AppointmentTable({
           <select
             value={selectedStatus}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatus(e.target.value)}
-            className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs focus:ring-2 focus:ring-amber-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+            className="h-9 rounded-lg border border-zinc-200/80 bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/70 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value={AppointmentStatusEnum.CONFIRMED}>Đã xác nhận</option>
@@ -96,7 +96,7 @@ export function AppointmentTable({
           <select
             value={selectedBarberId}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBarberId(e.target.value)}
-            className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-xs focus:ring-2 focus:ring-amber-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+            className="h-9 rounded-lg border border-zinc-200/80 bg-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/70 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
           >
             <option value="ALL">Tất cả Thợ cắt</option>
             <option value="barber-1">Huy Nguyễn (Master)</option>
@@ -107,9 +107,9 @@ export function AppointmentTable({
       </div>
 
       {/* Main Table */}
-      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 overflow-hidden shadow-sm">
+      <div className="rounded-xl bg-white dark:bg-zinc-950/60 overflow-hidden shadow-[var(--shadow-card)]">
         <Table>
-          <TableHeader className="bg-zinc-50 dark:bg-zinc-900/50">
+          <TableHeader className="bg-zinc-900/[0.03] dark:bg-zinc-900/50">
             <TableRow>
               <TableHead className="w-[110px]">Mã đặt lịch</TableHead>
               <TableHead>Khách hàng</TableHead>
